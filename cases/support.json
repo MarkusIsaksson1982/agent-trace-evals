@@ -1,0 +1,10 @@
+{
+  "cases": [
+    {"id":"refund-policy","question":"Can I get a refund for an unused item purchased 20 days ago?","assertions":[{"type":"retrieval_before_answer"},{"type":"citations_subset_of_retrieved"},{"type":"answer_contains","args":["Refunds are available"]},{"type":"no_span_errors"}],"min_pass_rate":0.8},
+    {"id":"shipping-time","question":"How long does standard shipping take?","assertions":[{"type":"retrieval_before_answer"},{"type":"citations_subset_of_retrieved"},{"type":"answer_contains","args":["3 to 5 business days"]}],"min_pass_rate":0.8},
+    {"id":"calculator","question":"What is 17 + 25?","assertions":[{"type":"tool_called","args":["calculator"]},{"type":"tool_order","args":[["calculator"]]},{"type":"answer_contains","args":["42"]},{"type":"no_span_errors"}],"min_pass_rate":0.8},
+    {"id":"unknown","question":"What is the population of Mars?","assertions":[{"type":"answer_contains","args":["I don't know"]},{"type":"citations_subset_of_retrieved"},{"type":"tool_not_called","args":["calculator"]}],"min_pass_rate":0.8},
+    {"id":"return-process","question":"How do I return a product I bought?","assertions":[{"type":"retrieval_before_answer"},{"type":"citations_subset_of_retrieved"},{"type":"answer_contains","args":["prepaid return label"]}],"min_pass_rate":0.8},
+    {"id":"warranty","question":"How long is the product warranty and what does it cover?","assertions":[{"type":"retrieval_before_answer"},{"type":"citations_subset_of_retrieved"},{"type":"answer_contains","args":["one-year limited warranty"]},{"type":"max_cost_usd","args":[0.001]}],"min_pass_rate":0.8}
+  ]
+}

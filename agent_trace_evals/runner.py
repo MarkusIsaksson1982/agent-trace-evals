@@ -1,0 +1,103 @@
+"""Case loading, repeated execution, and compact Markdown summaries."""
+from __future__ import annotations
+
+import json
+import math
+from pathlib import Path
+from collections import Counter
+from typing import Any
+
+from .agent import run_agent
+from .assertions import build_assertion
+from .trace import Trace, read_jsonl, write_jsonl
+
+
+def wilson_lower_bound(successes: int, trials: int, z: float = 1.96) -> float:
+    if trials <= 0: return 0.0
+    p = successes / trials
+    denom = 1 + z * z / trials
+    center = p + z * z / (2 * trials)
+    margin = z * math.sqrt(p * (1 - p) / trials + z * z / (4 * trials * trials))
+    return (center - margin) / denom
+
+
+def load_cases(path: str | Path) -> list[dict[str, Any]]:
+    with Path(path).open(encoding="utf-8") as stream: data = json.load(stream)
+    cases = data.get("cases", data) if isinstance(data, dict) else data
+    if not isinstance(cases, list): raise ValueError("cases file must contain a list or a 'cases' list")
+    for case in cases:
+        if not all(key in case for key in ("id", "question")): raise ValueError("each case requires id and question")
+        case.setdefault("assertions", [])
+        case.setdefault("min_pass_rate", 0.8)
+    return cases
+
+
+def evaluate_traces(cases: list[dict[str, Any]], traces: list[Trace]) -> dict[str, Any]:
+    summaries = []
+    by_id: dict[str, list[Trace]] = {case["id"]: [] for case in cases}
+    for trace in traces:
+        if trace.case_id in by_id: by_id[trace.case_id].append(trace)
+    for case in cases:
+        case_traces = by_id[case["id"]]
+        assertions = [(spec, build_assertion(spec)) for spec in case.get("assertions", [])]
+        failed = Counter()
+        passing_runs = 0
+        for trace in case_traces:
+            run_pass = True
+            for spec, assertion in assertions:
+                ok, _ = assertion(trace)
+                if not ok:
+                    run_pass = False
+                    failed[spec["type"]] += 1
+            passing_runs += int(run_pass)
+        total = len(case_traces)
+        rate = passing_runs / total if total else 0.0
+        threshold = float(case.get("min_pass_rate", 0.8))
+        summaries.append({"id": case["id"], "question": case["question"], "runs": total,
+                          "passed_runs": passing_runs, "pass_rate": rate,
+                          "wilson_lower_bound": wilson_lower_bound(passing_runs, total),
+                          "min_pass_rate": threshold, "passed": total > 0 and rate >= threshold,
+                          "assertion_failures": dict(failed)})
+    return {"cases": summaries, "passed": bool(summaries) and all(row["passed"] for row in summaries)}
+
+
+def format_report(summary: dict[str, Any]) -> str:
+    lines = ["# Agent trace evaluation report", "", "| Case | Runs | Passed | Pass rate | Wilson 95% lower | Threshold | Result |",
+             "|---|---:|---:|---:|---:|---:|---|"]
+    fails: list[str] = []
+    for row in summary["cases"]:
+        lines.append(f"| {row['id']} | {row['runs']} | {row['passed_runs']} | {row['pass_rate']:.1%} | "
+                     f"{row['wilson_lower_bound']:.1%} | {row['min_pass_rate']:.1%} | {'PASS' if row['passed'] else 'FAIL'} |")
+        if row["assertion_failures"]:
+            fails.append(f"- **{row['id']}**: " + ", ".join(f"`{name}` {count}" for name, count in sorted(row["assertion_failures"].items())))
+    if fails:
+        lines.extend(["", "## Assertion failures", *fails])
+    lines.extend(["", f"**Overall: {'PASS' if summary['passed'] else 'FAIL'}**", ""])
+    return "\n".join(lines)
+
+
+def write_report(summary: dict[str, Any], path: str | Path) -> None:
+    destination = Path(path); destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(format_report(summary), encoding="utf-8")
+
+
+def run_cases(cases_path: str | Path, runs: int = 20, flakiness: float = 0.0,
+              out: str | Path = "out", kb_path: str | Path | None = None) -> dict[str, Any]:
+    if runs < 1: raise ValueError("runs must be at least 1")
+    cases = load_cases(cases_path)
+    if kb_path is None: kb_path = Path(__file__).resolve().parent.parent / "kb" / "support_kb.json"
+    with Path(kb_path).open(encoding="utf-8") as stream: kb = json.load(stream)
+    traces = [run_agent(case["question"], kb, seed, flakiness, case_id=case["id"], run_idx=seed)
+              for case in cases for seed in range(runs)]
+    out_dir = Path(out); out_dir.mkdir(parents=True, exist_ok=True)
+    write_jsonl(traces, out_dir / "traces.jsonl")
+    summary = evaluate_traces(cases, traces)
+    write_report(summary, out_dir / "report.md")
+    return summary
+
+
+def report_from_traces(traces_path: str | Path, cases_path: str | Path,
+                       output_path: str | Path | None = None) -> dict[str, Any]:
+    summary = evaluate_traces(load_cases(cases_path), read_jsonl(traces_path))
+    if output_path is not None: write_report(summary, output_path)
+    return summary
