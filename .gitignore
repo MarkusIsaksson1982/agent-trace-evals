@@ -1,2 +1,5 @@
 out/
 __pycache__/
+ts/node_modules/
+ts/dist/
+.pytest_cache/

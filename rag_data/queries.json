@@ -1,0 +1,289 @@
+[
+ {
+  "qid": "q01",
+  "query": "How do I connect to the VPN from my Windows work computer?",
+  "gold": [
+   "vpn-01"
+  ],
+  "key_fact": [
+   "GlobalConnect"
+  ]
+ },
+ {
+  "qid": "q02",
+  "query": "My VPN connection keeps cutting out during the working day",
+  "gold": [
+   "vpn-02"
+  ],
+  "key_fact": [
+   "wired"
+  ]
+ },
+ {
+  "qid": "q03",
+  "query": "Hur får jag VPN att fungera på min Macbook?",
+  "gold": [
+   "vpn-03"
+  ],
+  "key_fact": [
+   "Self Service"
+  ]
+ },
+ {
+  "qid": "q04",
+  "query": "I forgot my password, how can I change it myself?",
+  "gold": [
+   "pwd-01"
+  ],
+  "key_fact": [
+   "password.vasterby.example"
+  ]
+ },
+ {
+  "qid": "q05",
+  "query": "Jag har glömt lösenordet och har inget mobilnummer registrerat",
+  "gold": [
+   "pwd-02"
+  ],
+  "key_fact": [
+   "legitimation"
+  ]
+ },
+ {
+  "qid": "q06",
+  "query": "I typed the wrong password too many times and can't log in",
+  "gold": [
+   "pwd-03"
+  ],
+  "key_fact": [
+   "30 minutes"
+  ]
+ },
+ {
+  "qid": "q07",
+  "query": "I got a new phone, how do I move my two-factor authentication?",
+  "gold": [
+   "mfa-01"
+  ],
+  "key_fact": [
+   "temporary access pass"
+  ]
+ },
+ {
+  "qid": "q08",
+  "query": "How do I get access to our team's shared inbox?",
+  "gold": [
+   "mail-01"
+  ],
+  "key_fact": [
+   "Funktionsbrevlåda"
+  ]
+ },
+ {
+  "qid": "q09",
+  "query": "My mailbox is out of space",
+  "gold": [
+   "mail-03"
+  ],
+  "key_fact": [
+   "online archiving",
+   "onlinearkiv"
+  ]
+ },
+ {
+  "qid": "q10",
+  "query": "I clicked a link in a suspicious email, what should I do?",
+  "gold": [
+   "mail-04"
+  ],
+  "key_fact": [
+   "change your password"
+  ]
+ },
+ {
+  "qid": "q11",
+  "query": "Hur skickar jag ett krypterat mejl till någon utanför kommunen?",
+  "gold": [
+   "mail-05"
+  ],
+  "key_fact": [
+   "[SÄKER]"
+  ]
+ },
+ {
+  "qid": "q12",
+  "query": "How do I print in colour?",
+  "gold": [
+   "print-03"
+  ],
+  "key_fact": [
+   "colour rights"
+  ]
+ },
+ {
+  "qid": "q13",
+  "query": "My laptop screen cracked when I dropped it",
+  "gold": [
+   "hw-02"
+  ],
+  "key_fact": [
+   "accidental damage"
+  ]
+ },
+ {
+  "qid": "q14",
+  "query": "The screens connected through my desk dock show no picture",
+  "gold": [
+   "hw-03"
+  ],
+  "key_fact": [
+   "firmware"
+  ]
+ },
+ {
+  "qid": "q15",
+  "query": "Can I get admin rights on my computer?",
+  "gold": [
+   "sw-03"
+  ],
+  "key_fact": [
+   "Privilege Management"
+  ]
+ },
+ {
+  "qid": "q16",
+  "query": "I need a program that is not in Software Center",
+  "gold": [
+   "sw-01"
+  ],
+  "key_fact": [
+   "business justification"
+  ]
+ },
+ {
+  "qid": "q17",
+  "query": "I accidentally deleted a document from OneDrive last week",
+  "gold": [
+   "files-02"
+  ],
+  "key_fact": [
+   "recycle bin"
+  ]
+ },
+ {
+  "qid": "q18",
+  "query": "How can I send a 300 GB file to a contractor?",
+  "gold": [
+   "files-04"
+  ],
+  "key_fact": [
+   "Filöverföring"
+  ]
+ },
+ {
+  "qid": "q19",
+  "query": "I left my laptop on the train",
+  "gold": [
+   "sec-01"
+  ],
+  "key_fact": [
+   "police report",
+   "remotely wiped"
+  ]
+ },
+ {
+  "qid": "q20",
+  "query": "Vi har skickat personuppgifter till fel mottagare, vad gör vi?",
+  "gold": [
+   "sec-03"
+  ],
+  "key_fact": [
+   "24 timmar"
+  ]
+ },
+ {
+  "qid": "q21",
+  "query": "What happens to my account on my last day at work?",
+  "gold": [
+   "acc-02"
+  ],
+  "key_fact": [
+   "17:00"
+  ]
+ },
+ {
+  "qid": "q22",
+  "query": "What wireless network should visitors use?",
+  "gold": [
+   "wifi-01"
+  ],
+  "key_fact": [
+   "Vasterby-Gast"
+  ]
+ },
+ {
+  "qid": "q23",
+  "query": "Can I work remotely from Thailand for a month?",
+  "gold": [
+   "remote-01"
+  ],
+  "key_fact": [
+   "security team"
+  ]
+ },
+ {
+  "qid": "q24",
+  "query": "When is the helpdesk open?",
+  "gold": [
+   "ops-01"
+  ],
+  "key_fact": [
+   "07:30"
+  ]
+ },
+ {
+  "qid": "q25",
+  "query": "How do I get an older version of a SharePoint document back?",
+  "gold": [
+   "files-05"
+  ],
+  "key_fact": [
+   "Versionshistorik",
+   "version history"
+  ]
+ },
+ {
+  "qid": "q26",
+  "query": "Can I paste citizen data into an AI chatbot?",
+  "gold": [
+   "sw-05"
+  ],
+  "key_fact": [
+   "public information"
+  ]
+ },
+ {
+  "qid": "q27",
+  "query": "How much does the parking permit at the town hall cost?",
+  "gold": [],
+  "key_fact": null
+ },
+ {
+  "qid": "q28",
+  "query": "What is the salary increase for 2027?",
+  "gold": [],
+  "key_fact": null
+ },
+ {
+  "qid": "q29",
+  "query": "How do I book a vacation day in the holiday calendar?",
+  "gold": [],
+  "key_fact": null
+ },
+ {
+  "qid": "q30",
+  "query": "Vilken lunchrestaurang finns i stadshuset?",
+  "gold": [],
+  "key_fact": null
+ }
+]

@@ -1,0 +1,322 @@
+[
+ {
+  "id": "vpn-01",
+  "title": "VPN setup on Windows",
+  "text": "Install the GlobalConnect client from the Software Center. Sign in with your work email and approve the push notification in the Authenticator app. The VPN gateway is vpn.vasterby.example."
+ },
+ {
+  "id": "vpn-02",
+  "title": "VPN disconnects frequently",
+  "text": "If the VPN drops every few minutes, switch from Wi-Fi to a wired connection and disable power saving for the network adapter. Persistent drops should be reported with the client log file attached."
+ },
+ {
+  "id": "vpn-03",
+  "title": "VPN på Mac",
+  "text": "Installera GlobalConnect från Self Service på din Mac. Ge appen behörighet under Systeminställningar > Integritet. Starta om datorn efter installationen."
+ },
+ {
+  "id": "pwd-01",
+  "title": "Password reset",
+  "text": "Reset your password at the self-service portal password.vasterby.example. You need a registered mobile number. Passwords must be at least 14 characters and are valid for 365 days."
+ },
+ {
+  "id": "pwd-02",
+  "title": "Glömt lösenord utan mobil",
+  "text": "Om du inte har registrerat ett mobilnummer måste du besöka servicedesken med giltig legitimation. Servicedesken i stadshuset är öppen vardagar 08–16."
+ },
+ {
+  "id": "pwd-03",
+  "title": "Account locked",
+  "text": "Your account locks after 10 failed sign-in attempts and unlocks automatically after 30 minutes. Call the service desk if you need it unlocked sooner."
+ },
+ {
+  "id": "mfa-01",
+  "title": "New phone and MFA",
+  "text": "When you change phones, register the new device at mysignins before resetting the old one. If the old phone is lost, the service desk can issue a temporary access pass valid for 8 hours."
+ },
+ {
+  "id": "mfa-02",
+  "title": "MFA-kod kommer inte",
+  "text": "Kontrollera att telefonens klocka är synkroniserad automatiskt. Notiser kräver att Authenticator-appen får skicka meddelanden. Använd annars engångskoden i appen."
+ },
+ {
+  "id": "mail-01",
+  "title": "Shared mailbox access",
+  "text": "Access to a shared mailbox is requested by the mailbox owner through the IT portal form 'Funktionsbrevlåda'. It appears in Outlook within 2 hours after approval."
+ },
+ {
+  "id": "mail-02",
+  "title": "Out of office",
+  "text": "Set automatic replies in Outlook under File > Automatic Replies. In Outlook on the web it is under Settings > Mail > Automatic replies. Include an alternative contact."
+ },
+ {
+  "id": "mail-03",
+  "title": "Mailbox full",
+  "text": "Standard mailboxes have a 50 GB quota. Empty Deleted Items and enable online archiving, which gives an additional 100 GB archive."
+ },
+ {
+  "id": "mail-04",
+  "title": "Phishing report",
+  "text": "Report suspicious emails with the 'Report' button in Outlook. Do not forward phishing emails to colleagues. If you clicked a link, change your password and call the service desk immediately."
+ },
+ {
+  "id": "mail-05",
+  "title": "Skicka krypterad e-post",
+  "text": "Skriv [SÄKER] i ämnesraden för att kryptera ett mejl till externa mottagare. Mottagaren får en länk och en engångskod för att läsa meddelandet."
+ },
+ {
+  "id": "print-01",
+  "title": "Add a printer",
+  "text": "Printers are added via Follow-Me printing: install the 'FollowMe' queue from Software Center, print, then badge in at any printer to release the job within 24 hours."
+ },
+ {
+  "id": "print-02",
+  "title": "Utskrift fastnar",
+  "text": "Om utskriften inte släpps vid skrivaren, kontrollera att passerkortet är kopplat till ditt konto i IT-portalen. Jobb raderas automatiskt efter 24 timmar."
+ },
+ {
+  "id": "print-03",
+  "title": "Color printing",
+  "text": "Colour printing is disabled by default to reduce cost. Managers can request colour rights for their unit through the IT portal; cost is charged to the unit at 1.20 SEK per page."
+ },
+ {
+  "id": "hw-01",
+  "title": "Order a new laptop",
+  "text": "Laptops are replaced every four years. Your manager orders a new one in the IT portal under Hardware. Delivery takes about 10 working days."
+ },
+ {
+  "id": "hw-02",
+  "title": "Broken screen",
+  "text": "Accidental damage is covered once per device lifetime. Report the damage in the IT portal and bring the laptop to the service desk; a loaner is provided while it is repaired."
+ },
+ {
+  "id": "hw-03",
+  "title": "Docking station",
+  "text": "The standard USB-C dock supports two external monitors. If monitors stay black, update the dock firmware from Software Center and reconnect the cable."
+ },
+ {
+  "id": "hw-04",
+  "title": "Mobiltelefon",
+  "text": "Anställda med behov får en tjänstetelefon. Chefen beställer i IT-portalen. Telefonen måste vara registrerad i Intune innan e-post kan synkas."
+ },
+ {
+  "id": "hw-05",
+  "title": "Headset",
+  "text": "USB headsets are ordered through the IT portal accessories catalogue. Bluetooth headsets are not supported for Teams meetings on desktop computers."
+ },
+ {
+  "id": "sw-01",
+  "title": "Install software",
+  "text": "Approved software is self-installed from Software Center. Software not in the catalogue requires a request with business justification and is reviewed by the security team within 5 working days."
+ },
+ {
+  "id": "sw-02",
+  "title": "Adobe Acrobat licence",
+  "text": "Acrobat Pro licences are assigned per user and cost the unit 2,400 SEK per year. Acrobat Reader is free and available to everyone in Software Center."
+ },
+ {
+  "id": "sw-03",
+  "title": "Administratörsrättigheter",
+  "text": "Lokala administratörsrättigheter ges inte till ordinarie användare. Utvecklare kan ansöka om tidsbegränsad behörighet via Privilege Management i högst 4 timmar."
+ },
+ {
+  "id": "sw-04",
+  "title": "Windows updates",
+  "text": "Windows updates install automatically on Wednesdays. You can postpone a restart up to three times. Computers not updated for 30 days are blocked from the network."
+ },
+ {
+  "id": "teams-01",
+  "title": "Teams meeting room",
+  "text": "Book meeting rooms with Teams Rooms equipment in Outlook by adding the room as a resource. The room screen shows the meeting and you join with one tap."
+ },
+ {
+  "id": "teams-02",
+  "title": "Teams external guests",
+  "text": "External guests can join Teams meetings via link without an account. Adding externals as team members requires the team owner to request guest access."
+ },
+ {
+  "id": "teams-03",
+  "title": "Teams-ljud fungerar inte",
+  "text": "Välj rätt ljudenhet under Inställningar > Enheter i Teams. Gör ett testsamtal. Om det fortfarande inte fungerar, starta om Teams och kontrollera att headsetet inte är tystat."
+ },
+ {
+  "id": "files-01",
+  "title": "Where to store files",
+  "text": "Store personal working files in OneDrive and shared unit files in SharePoint team sites. Network drive H: is read-only since 2025 and will be shut down."
+ },
+ {
+  "id": "files-02",
+  "title": "Restore deleted file",
+  "text": "Deleted files in OneDrive and SharePoint can be restored from the recycle bin for 93 days. After that, contact the service desk; backups are kept for one year."
+ },
+ {
+  "id": "files-03",
+  "title": "Share with external party",
+  "text": "Share files externally with SharePoint links set to 'Specific people'. Links to externals expire after 30 days. Never share documents containing personal identity numbers externally."
+ },
+ {
+  "id": "files-04",
+  "title": "Stora filer",
+  "text": "För filer större än 250 GB används tjänsten Filöverföring i IT-portalen. Länken gäller i 7 dagar."
+ },
+ {
+  "id": "sec-01",
+  "title": "Lost laptop",
+  "text": "Report a lost or stolen laptop to the service desk immediately and file a police report. The device is remotely wiped. Disks are encrypted with BitLocker."
+ },
+ {
+  "id": "sec-02",
+  "title": "USB memory sticks",
+  "text": "Only encrypted USB sticks issued by IT may be used. Other USB storage is blocked. Encrypted sticks are ordered through the accessories catalogue."
+ },
+ {
+  "id": "sec-03",
+  "title": "Personuppgiftsincident",
+  "text": "En personuppgiftsincident ska anmälas till dataskyddsombudet inom 24 timmar via formuläret i intranätet. Kommunen anmäler vidare till IMY inom 72 timmar vid behov."
+ },
+ {
+  "id": "sec-04",
+  "title": "Security awareness training",
+  "text": "All employees must complete the annual security awareness course in the learning platform. It takes about 45 minutes. Managers receive a report of incomplete courses."
+ },
+ {
+  "id": "sec-05",
+  "title": "Screen lock",
+  "text": "Lock your screen with Windows+L whenever you leave your desk. Computers lock automatically after 10 minutes of inactivity."
+ },
+ {
+  "id": "acc-01",
+  "title": "New employee account",
+  "text": "The manager creates the account in the HR system at least 5 working days before the start date. The new employee receives credentials by text message on the first day."
+ },
+ {
+  "id": "acc-02",
+  "title": "Employee leaving",
+  "text": "Accounts are disabled at 17:00 on the last employment day. The mailbox is kept for 90 days and can be forwarded to the manager on request."
+ },
+ {
+  "id": "acc-03",
+  "title": "Konsultkonto",
+  "text": "Konsulter får ett konto med prefixet ext-. Kontot är giltigt högst 12 månader och förlängs av beställande chef."
+ },
+ {
+  "id": "acc-04",
+  "title": "Name change",
+  "text": "After a name change, HR updates the HR system and your email address is changed automatically within one day. The old address keeps working as an alias."
+ },
+ {
+  "id": "wifi-01",
+  "title": "Guest Wi-Fi",
+  "text": "Visitors use the network 'Vasterby-Gast'. They register with a mobile number and receive a code valid for 24 hours."
+ },
+ {
+  "id": "wifi-02",
+  "title": "Wi-Fi för anställda",
+  "text": "Anställdas datorer ansluter automatiskt till nätverket 'Vasterby-Personal' med certifikat. Privata enheter ska använda 'Vasterby-Privat' och har bara internetåtkomst."
+ },
+ {
+  "id": "wifi-03",
+  "title": "Eduroam",
+  "text": "School staff can use eduroam at other institutions with their work email and a separate eduroam password set in the IT portal."
+ },
+ {
+  "id": "remote-01",
+  "title": "Working abroad",
+  "text": "Working from outside the EU requires approval from your manager and the security team, because some systems block foreign IP addresses. Apply at least two weeks before travel."
+ },
+ {
+  "id": "remote-02",
+  "title": "Home office equipment",
+  "text": "Employees with approved remote work can borrow one monitor and a keyboard. Equipment is returned when remote work ends."
+ },
+ {
+  "id": "sys-01",
+  "title": "Case management system access",
+  "text": "Access to the case management system Ärendo is requested by your manager. Training must be completed before the account is activated."
+ },
+ {
+  "id": "sys-02",
+  "title": "Ärendo är långsamt",
+  "text": "Om Ärendo är långsamt, rensa webbläsarens cache och använd Edge. Driftstörningar publiceras på driftinfo-sidan på intranätet."
+ },
+ {
+  "id": "sys-03",
+  "title": "E-signing",
+  "text": "Documents are signed electronically with the e-signing service using BankID. Signed documents are archived automatically in the document management system."
+ },
+ {
+  "id": "sys-04",
+  "title": "Time reporting",
+  "text": "Time is reported in the HR self-service portal by the 5th of the following month. Contact payroll, not IT, for questions about salary."
+ },
+ {
+  "id": "sys-05",
+  "title": "Diarium",
+  "text": "Allmänna handlingar registreras i diariet inom en arbetsdag. Registratorn hjälper till med diarienummer och sekretessmarkering."
+ },
+ {
+  "id": "ops-01",
+  "title": "Service desk hours",
+  "text": "The service desk is open weekdays 07:30–17:00 by phone internal extension 4500. Critical outages outside office hours go to the on-call technician via the same number."
+ },
+ {
+  "id": "ops-02",
+  "title": "Priority levels",
+  "text": "Tickets are prioritised P1 to P4. P1 means many users cannot work and has a 1 hour response target. P4 requests have a 5 working day target."
+ },
+ {
+  "id": "ops-03",
+  "title": "Driftinformation",
+  "text": "Planerade underhållsfönster sker söndagar 06–10. Information skickas ut minst tre dagar i förväg."
+ },
+ {
+  "id": "ops-04",
+  "title": "Ticket status",
+  "text": "You can follow your tickets in the IT portal under My cases. You receive an email when the status changes or when the technician needs more information."
+ },
+ {
+  "id": "acc-05",
+  "title": "Accessibility tools",
+  "text": "Screen readers and magnification software are available on request. The accessibility coordinator helps set up adapted workplaces."
+ },
+ {
+  "id": "sw-05",
+  "title": "AI assistant policy",
+  "text": "Generative AI tools may only be used with public information. The approved assistant is available in Edge when signed in with your work account; do not paste personal data into it."
+ },
+ {
+  "id": "sw-06",
+  "title": "Browser",
+  "text": "Microsoft Edge is the standard browser. Chrome is available in Software Center but some internal systems are only tested with Edge."
+ },
+ {
+  "id": "hw-06",
+  "title": "Return equipment",
+  "text": "Return old laptops and phones to the service desk. Data is erased according to NIST guidelines and the equipment is recycled."
+ },
+ {
+  "id": "print-04",
+  "title": "Scanning",
+  "text": "Scan to email by badging in at a printer and choosing Scan to me. The PDF is sent to your work email address within a few minutes."
+ },
+ {
+  "id": "mail-06",
+  "title": "Distribution lists",
+  "text": "Distribution lists are created on request by a manager. Owners can manage members themselves in Outlook."
+ },
+ {
+  "id": "teams-04",
+  "title": "Teams webinar",
+  "text": "Large events with more than 300 participants should use Teams town hall. Contact communications for help with production."
+ },
+ {
+  "id": "sec-06",
+  "title": "Password manager",
+  "text": "The approved password manager is available in Software Center. Do not store work passwords in the browser on shared computers."
+ },
+ {
+  "id": "files-05",
+  "title": "Versionshistorik",
+  "text": "SharePoint sparar upp till 500 versioner av ett dokument. Högerklicka på filen och välj Versionshistorik för att återställa en äldre version."
+ }
+]
