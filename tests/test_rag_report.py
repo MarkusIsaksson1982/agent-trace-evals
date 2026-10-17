@@ -160,3 +160,31 @@ def test_citations_str_is_a_single_id():
 def test_missing_optional_keys_use_defaults():
     md = render_report([{"qid": "only"}])
     assert _cells(_data_rows(md)[0]) == ["only", "-", "-", "no", "n/a", "no"]
+
+
+@pytest.mark.parametrize("bad", [-0.1, 1.5, float("nan"), float("inf"), True, "abc",
+                                 "nan", "inf", "1.5", "", 10 ** 400])
+def test_invalid_faithfulness_raises_value_error(bad):
+    with pytest.raises(ValueError):
+        render_report([{"qid": "q-bad", "retrieved": ["a"], "citations": ["a"],
+                        "citations_valid": True, "refused": False, "faithfulness": bad}])
+
+
+def test_faithfulness_error_names_qid_and_shows_original_value():
+    with pytest.raises(ValueError, match="q-bad"):
+        render_report([{"qid": "q-bad", "refused": False, "faithfulness": 2.0}])
+    huge = 10 ** 400
+    with pytest.raises(ValueError, match=str(huge)):
+        render_report([{"qid": "q-bad", "refused": False, "faithfulness": huge}])
+
+
+@pytest.mark.parametrize("good", [0, 1, "0.5"])
+def test_accepted_faithfulness_values(good):
+    md = render_report([{"qid": "q-ok", "retrieved": ["a"], "citations": ["a"],
+                         "citations_valid": True, "refused": False, "faithfulness": good}])
+    assert len(_cells(_data_rows(md)[0])) == 6
+
+
+def test_render_report_is_exported_from_package():
+    from agent_trace_evals.rag import render_report as exported
+    assert exported is render_report

@@ -1,4 +1,6 @@
 import json
+import math
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -80,6 +82,17 @@ def test_drop_infinitesimally_above_threshold_fails():
     assert not gate["passed"]
 
 
+def test_drop_one_ulp_above_threshold_fails():
+    current = math.nextafter(0.85, 0.0)
+    gate = compare_to_baseline(_summary(current), Baseline(cases={"c0": 0.90}), max_drop=0.05)
+    assert not gate["passed"]
+
+
+def test_drop_just_over_threshold_fails():
+    gate = compare_to_baseline(_summary(0.90 - (0.05 + 1e-12)), Baseline(cases={"c0": 0.90}), max_drop=0.05)
+    assert not gate["passed"]
+
+
 def test_drop_within_threshold_passes():
     gate = compare_to_baseline(_summary(0.85), Baseline(cases={"c0": 0.9}), max_drop=0.1)
     assert gate["passed"]
@@ -101,6 +114,39 @@ def test_new_cases_are_reported_not_failed():
     gate = compare_to_baseline(_summary(0.5, 1.0), Baseline(cases={"c0": 0.5}), max_drop=0.1)
     assert gate["passed"]
     assert gate["new_cases"] == ["c1"]
+
+
+def test_write_baseline_is_atomic_and_leaves_no_temp_files(tmp_path):
+    path = tmp_path / "baseline.json"
+    write_baseline(_summary(0.75), path, runs=20, flakiness=0.0)
+    assert json.loads(path.read_text()) == {
+        "version": BASELINE_VERSION, "runs": 20, "flakiness": 0.0, "cases": {"c0": 0.75}}
+    assert load_baseline(path).cases == {"c0": 0.75}
+    assert [p.name for p in tmp_path.iterdir()] == ["baseline.json"]
+
+
+def test_write_baseline_honours_umask(tmp_path):
+    old = os.umask(0o022)
+    try:
+        path = tmp_path / "baseline.json"
+        write_baseline(_summary(0.75), path)
+        assert (path.stat().st_mode & 0o777) == 0o644
+    finally:
+        os.umask(old)
+
+
+def test_write_baseline_failure_cleans_temp_and_keeps_existing(tmp_path, monkeypatch):
+    path = tmp_path / "baseline.json"
+    path.write_text('{"existing": true}')
+
+    def boom(*args, **kwargs):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr("agent_trace_evals.runner.os.replace", boom)
+    with pytest.raises(OSError):
+        write_baseline(_summary(0.75), path)
+    assert path.read_text() == '{"existing": true}'
+    assert [p.name for p in tmp_path.iterdir()] == ["baseline.json"]
 
 
 def _write_cases(path, min_pass_rate=0.0):

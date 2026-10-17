@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from collections import Counter
+from fractions import Fraction
 from typing import Any
 
 from .agent import run_agent
@@ -106,7 +109,26 @@ def write_baseline(summary: dict[str, Any], path: str | Path,
     destination.parent.mkdir(parents=True, exist_ok=True)
     payload = {"version": BASELINE_VERSION, "runs": runs, "flakiness": flakiness,
                "cases": baseline_from_summary(summary)}
-    destination.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    fd, tmp_name = tempfile.mkstemp(dir=destination.parent, prefix=f".{destination.name}.", suffix=".tmp")
+    try:
+        old_umask = os.umask(0)
+        os.umask(old_umask)
+        os.chmod(tmp_name, 0o666 & ~old_umask)
+        try:
+            stream = os.fdopen(fd, "w", encoding="utf-8")
+        except BaseException:
+            os.close(fd)
+            raise
+        with stream:
+            stream.write(text)
+        os.replace(tmp_name, destination)
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
 
 
 def _validate_rate(case_id: str, rate: Any) -> float:
@@ -161,21 +183,22 @@ def load_baseline(path: str | Path) -> Baseline:
                     flakiness=_validate_flakiness(data.get("flakiness")), version=version)
 
 
-def _rounding_tolerance(*values: float) -> float:
-    """Slack representing a few floating-point ULPs.
-
-    This keeps a drop that is exactly the threshold (for example 0.90 -> 0.85 with
-    --max-drop 0.05) from failing due to binary rounding, while any genuinely larger
-    drop still fails.
-    """
-    scale = max((abs(value) for value in values), default=1.0)
-    return 8 * math.ulp(scale)
+def _exact_rate(value: Any) -> Fraction:
+    """Exact decimal value of a printed float, for ULP-free comparisons."""
+    return Fraction(repr(float(value)))
 
 
 def compare_to_baseline(summary: dict[str, Any], baseline: Baseline, max_drop: float = 0.05,
                         allow_missing: bool = False) -> dict[str, Any]:
+    """Gate that fails iff ``baseline - current > max_drop`` for any shared case.
+
+    Uses an exact decimal comparison (``Fraction(repr(...))``), so rates are
+    compared as printed: a drop exactly at the threshold passes and any larger
+    drop fails, with no floating-point slack.
+    """
     rates = baseline.cases
     current_rates = {str(row["id"]): float(row["pass_rate"]) for row in summary["cases"]}
+    limit = _exact_rate(max_drop)
     regressions: list[dict[str, Any]] = []
     new_cases: list[str] = []
     for row in summary["cases"]:
@@ -183,10 +206,10 @@ def compare_to_baseline(summary: dict[str, Any], baseline: Baseline, max_drop: f
         if case_id not in rates:
             new_cases.append(case_id)
             continue
-        drop = rates[case_id] - current_rates[case_id]
-        if drop - max_drop > _rounding_tolerance(rates[case_id], current_rates[case_id], max_drop):
+        drop = _exact_rate(rates[case_id]) - _exact_rate(current_rates[case_id])
+        if drop > limit:
             regressions.append({"id": case_id, "baseline_pass_rate": rates[case_id],
-                                "pass_rate": row["pass_rate"], "drop": drop})
+                                "pass_rate": row["pass_rate"], "drop": float(drop)})
     missing_cases = sorted(case_id for case_id in rates if case_id not in current_rates)
     failed = bool(regressions) or (bool(missing_cases) and not allow_missing)
     return {"passed": not failed, "max_drop": max_drop, "regressions": regressions,

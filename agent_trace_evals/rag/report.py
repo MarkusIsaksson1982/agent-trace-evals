@@ -20,9 +20,24 @@ record's ``citations_valid`` verbatim when present and only recomputes
 exactly the rows feeding the mean show a number.  Every cell is escaped: a
 literal pipe becomes the HTML entity ``&#124;`` and newlines become spaces, so a
 data row always parses as the six GFM columns declared in ``HEADER``.
+
+``faithfulness`` must be ``None`` or a finite real number in ``[0, 1]`` (a
+numeric string is accepted, ``bool``/NaN/+-inf are rejected); anything else
+raises ``ValueError`` naming the offending record's ``qid``.
+
+Usage::
+
+    from agent_trace_evals.rag import render_report
+
+    print(render_report([
+        {"qid": "q1", "retrieved": ["pwd-01"], "citations": ["pwd-01"],
+         "refused": False, "faithfulness": 1.0},
+    ]))
 """
 
 from __future__ import annotations
+
+import math
 
 HEADER = "| qid | retrieved | citations | cite_ok | faithfulness | refused |"
 SEPARATOR = "| --- | --- | --- | --- | --- | --- |"
@@ -60,8 +75,32 @@ def _as_bool(value):
     raise ValueError(f"cannot interpret {value!r} as a refusal flag")
 
 
-def _as_float(value):
-    return None if value is None else float(value)
+def _faith_error(qid, value):
+    return ValueError(
+        f"faithfulness for qid {qid!r} must be None or a finite number in [0, 1], got {value!r}")
+
+
+def _as_float(value, qid):
+    """Faithfulness: None stays None; else a finite real in [0, 1] (no bool)."""
+    if value is None:
+        return None
+    original = value
+    if isinstance(value, bool):
+        raise _faith_error(qid, original)
+    if isinstance(value, str):
+        try:
+            value = float(value)
+        except ValueError:
+            raise _faith_error(qid, original) from None
+    if not isinstance(value, (int, float)):
+        raise _faith_error(qid, original)
+    try:
+        number = float(value)
+    except OverflowError:
+        raise _faith_error(qid, original) from None
+    if not math.isfinite(number) or not 0.0 <= number <= 1.0:
+        raise _faith_error(qid, original)
+    return number
 
 
 def _num(value):
@@ -70,10 +109,11 @@ def _num(value):
 
 
 def _analyze(rec):
+    qid = rec.get("qid", "")
     retrieved = _as_id_list(rec.get("retrieved"))
     citations = _as_id_list(rec.get("citations"))
     refused = _as_bool(rec.get("refused"))
-    faith = _as_float(rec.get("faithfulness"))
+    faith = _as_float(rec.get("faithfulness"), qid)
     unknown = [c for c in citations if c not in retrieved]
 
     flag = rec.get("citations_valid")
@@ -84,7 +124,7 @@ def _analyze(rec):
     else:
         valid = _as_bool(flag)
 
-    return {"qid": rec.get("qid", ""), "retrieved": retrieved, "citations": citations,
+    return {"qid": qid, "retrieved": retrieved, "citations": citations,
             "refused": refused, "faith": faith, "valid": valid, "unknown": unknown}
 
 
