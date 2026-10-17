@@ -37,6 +37,18 @@ def _validate_baseline_args(parser: argparse.ArgumentParser, args: argparse.Name
     return DEFAULT_MAX_DROP if args.max_drop is None else args.max_drop
 
 
+def _runs_from_summary(summary: dict[str, Any]) -> int | None:
+    values = {row["runs"] for row in summary["cases"]
+              if isinstance(row.get("runs"), int) and not isinstance(row["runs"], bool)
+              and row["runs"] > 0}
+    if len(values) == 1:
+        return values.pop()
+    if len(values) > 1:
+        print("warning: traces have unequal run counts per case "
+              f"({sorted(values)}); pass rates may not be comparable", file=sys.stderr)
+    return None
+
+
 def _apply_baseline(summary: dict[str, Any], args: argparse.Namespace, max_drop: float,
                     runs: int | None = None) -> int:
     if args.write_baseline:
@@ -105,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         output = args.out or str(Path(args.traces).with_name("report.md"))
         summary = report_from_traces(args.traces, args.cases, output)
         print(f"Report {'PASS' if summary['passed'] else 'FAIL'}: {output}")
-        gate_code = _apply_baseline(summary, args, max_drop)
+        gate_code = _apply_baseline(summary, args, max_drop, runs=_runs_from_summary(summary))
     if gate_code:
         return gate_code
     return 0 if summary["passed"] else 1

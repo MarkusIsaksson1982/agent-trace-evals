@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_trace_evals.__main__ import _apply_baseline, main
+from agent_trace_evals.__main__ import _apply_baseline, _runs_from_summary, main
 from agent_trace_evals.runner import (BASELINE_VERSION, Baseline, BaselineError,
     baseline_from_summary, compare_to_baseline, load_baseline, write_baseline)
 
@@ -321,3 +321,38 @@ def test_usage_error_exit_code_in_process(tmp_path):
         main(["run", str(cases), "--write-baseline", str(tmp_path / "b.json"),
               "--baseline", str(tmp_path / "b.json")])
     assert excinfo.value.code == 2
+
+
+def test_runs_from_summary_single_value():
+    summary = {"cases": [{"runs": 5}, {"runs": 5}], "passed": True}
+    assert _runs_from_summary(summary) == 5
+
+
+def test_runs_from_summary_ignores_missing_and_bools():
+    summary = {"cases": [{"runs": 5}, {}, {"runs": True}], "passed": True}
+    assert _runs_from_summary(summary) == 5
+
+
+def test_runs_from_summary_mixed_values_warns(capsys):
+    summary = {"cases": [{"runs": 3}, {"runs": 5}], "passed": True}
+    assert _runs_from_summary(summary) is None
+    assert "unequal run counts per case ([3, 5])" in capsys.readouterr().err
+
+
+def test_runs_from_summary_empty_is_none(capsys):
+    assert _runs_from_summary({"cases": [], "passed": True}) is None
+    assert capsys.readouterr().err == ""
+
+
+def test_report_baseline_runs_mismatch_warns(tmp_path, capsys):
+    cases = tmp_path / "cases.json"
+    _write_cases(cases)
+    traces_out = tmp_path / "run5"
+    assert main(["run", str(cases), "--runs", "5", "--out", str(traces_out)]) == 0
+    baseline = tmp_path / "baseline.json"
+    main(["run", str(cases), "--runs", "3", "--out", str(tmp_path / "run3"),
+          "--write-baseline", str(baseline), "--force-baseline"])
+    capsys.readouterr()
+    main(["report", str(traces_out / "traces.jsonl"), "--cases", str(cases),
+          "--baseline", str(baseline)])
+    assert "baseline recorded with --runs 3" in capsys.readouterr().err
