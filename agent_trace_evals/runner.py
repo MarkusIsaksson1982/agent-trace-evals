@@ -105,6 +105,8 @@ def baseline_from_summary(summary: dict[str, Any]) -> dict[str, float]:
 
 def write_baseline(summary: dict[str, Any], path: str | Path,
                    runs: int | None = None, flakiness: float | None = None) -> None:
+    runs = _validate_runs(runs)
+    flakiness = _validate_flakiness(flakiness)
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     payload = {"version": BASELINE_VERSION, "runs": runs, "flakiness": flakiness,
@@ -173,7 +175,7 @@ def load_baseline(path: str | Path) -> Baseline:
     if not isinstance(data, dict):
         raise BaselineError("baseline must be a JSON object with a 'cases' mapping")
     version = data.get("version", BASELINE_VERSION)
-    if version != BASELINE_VERSION:
+    if isinstance(version, bool) or not isinstance(version, int) or version != BASELINE_VERSION:
         raise BaselineError(f"unsupported baseline version {version!r} (expected {BASELINE_VERSION})")
     raw_cases = data.get("cases")
     if not isinstance(raw_cases, dict):
@@ -196,6 +198,9 @@ def compare_to_baseline(summary: dict[str, Any], baseline: Baseline, max_drop: f
     compared as printed: a drop exactly at the threshold passes and any larger
     drop fails, with no floating-point slack.
     """
+    if isinstance(max_drop, bool) or not isinstance(max_drop, (int, float)) or \
+            not math.isfinite(max_drop) or not 0.0 <= max_drop <= 1.0:
+        raise ValueError("max_drop must be a finite number between 0 and 1")
     rates = baseline.cases
     current_rates = {str(row["id"]): float(row["pass_rate"]) for row in summary["cases"]}
     limit = _exact_rate(max_drop)

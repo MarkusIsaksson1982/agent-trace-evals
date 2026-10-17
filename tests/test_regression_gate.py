@@ -61,6 +61,14 @@ def test_load_rejects_bad_metadata(tmp_path):
             load_baseline(path)
 
 
+def test_load_rejects_non_int_version(tmp_path):
+    for version in (True, 1.0):
+        path = tmp_path / "baseline.json"
+        path.write_text(json.dumps({"version": version, "cases": {"c0": 0.5}}))
+        with pytest.raises(BaselineError):
+            load_baseline(path)
+
+
 def test_load_missing_file_is_clean(tmp_path):
     with pytest.raises(BaselineError):
         load_baseline(tmp_path / "absent.json")
@@ -96,6 +104,13 @@ def test_drop_just_over_threshold_fails():
 def test_drop_within_threshold_passes():
     gate = compare_to_baseline(_summary(0.85), Baseline(cases={"c0": 0.9}), max_drop=0.1)
     assert gate["passed"]
+
+
+def test_compare_rejects_invalid_max_drop():
+    baseline = Baseline(cases={"c0": 0.5})
+    for value in (-0.1, 1.5, float("nan"), True):
+        with pytest.raises(ValueError):
+            compare_to_baseline(_summary(0.5), baseline, max_drop=value)
 
 
 def test_missing_case_fails_by_default():
@@ -147,6 +162,15 @@ def test_write_baseline_failure_cleans_temp_and_keeps_existing(tmp_path, monkeyp
         write_baseline(_summary(0.75), path)
     assert path.read_text() == '{"existing": true}'
     assert [p.name for p in tmp_path.iterdir()] == ["baseline.json"]
+
+
+def test_write_baseline_rejects_invalid_metadata_without_writing(tmp_path):
+    path = tmp_path / "baseline.json"
+    for metadata in ({"runs": 0}, {"runs": True}, {"flakiness": 1.5}, {"flakiness": float("nan")}):
+        with pytest.raises(BaselineError):
+            write_baseline(_summary(0.5), path, **metadata)
+        assert not path.exists()
+        assert list(tmp_path.iterdir()) == []
 
 
 def _write_cases(path, min_pass_rate=0.0):
