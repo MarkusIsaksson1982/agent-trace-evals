@@ -4,7 +4,7 @@ Input is the list of per-question records produced by ``RAGPipeline.answer``
 (or anything with the same shape)::
 
     {
-        "qid": "q1",               # required
+        "qid": "q1",               # required; non-empty str or int
         "retrieved": ["pwd-01"],   # optional list/tuple of ids; a str is ONE id
         "citations": ["pwd-01"],   # optional list/tuple of ids; a str is ONE id
         "citations_valid": True,   # optional; authoritative when present
@@ -47,6 +47,15 @@ def _escape_cell(value):
     """Render any value as one GFM cell: no raw pipe and no newline."""
     text = "" if value is None else str(value)
     return text.replace("|", "&#124;").replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
+
+
+def _valid_qid(qid) -> bool:
+    """A qid must be a non-blank str or an int (bool is not an int here)."""
+    if isinstance(qid, bool):
+        return False
+    if isinstance(qid, int):
+        return True
+    return isinstance(qid, str) and bool(qid.strip())
 
 
 def _as_id_list(value):
@@ -175,8 +184,8 @@ def render_report(records):
         if not isinstance(rec, dict):
             raise TypeError(f"record at index {i} is not a dict (got {type(rec).__name__})")
         qid = rec.get("qid")
-        if qid is None or (isinstance(qid, str) and not qid.strip()):
-            raise ValueError(f"record at index {i} has no qid")
+        if not _valid_qid(qid):
+            raise ValueError(f"record at index {i} has no valid qid (got {qid!r})")
         analyses.append(_analyze(rec))
         lines.append(_row(analyses[-1]))
 

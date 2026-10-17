@@ -142,6 +142,17 @@ def test_empty_qid_raises_value_error_naming_index():
         render_report([{"qid": "", "retrieved": ["a"], "citations": ["a"]}])
 
 
+@pytest.mark.parametrize("bad", [[], {}, True, 1.5, "   "])
+def test_invalid_qid_raises_value_error_naming_index(bad):
+    with pytest.raises(ValueError, match="index"):
+        render_report([{"qid": bad, "retrieved": ["a"], "citations": ["a"]}])
+
+
+def test_int_qid_renders():
+    row = _data_rows(render_report([{"qid": 7}]))[0]
+    assert "| 7 |" in row
+
+
 def test_answered_none_faithfulness_is_n_a_and_skipped_in_mean():
     a = {"qid": "a", "retrieved": ["x"], "citations": ["x"], "citations_valid": True,
          "refused": False, "faithfulness": None}
