@@ -33,6 +33,31 @@ The run command writes `out/traces.jsonl` and `out/report.md`. The report comman
 Assertion failures: `refund-policy`: `answer_contains` 3, `citations_subset_of_retrieved` 3 · `calculator`: `tool_called` 3, `tool_order` 3, `no_span_errors` 3.
 Each failure is attributed to the assertion that caught it, so you see *what* the agent did wrong (skipped retrieval, wrong tool, hallucinated citation), not only that the answer was off.
 
+## Regression gate against a baseline
+
+A single PASS/FAIL against a fixed threshold hides slow drift: a case can fall from 100% to 85% and still pass an 80% threshold. The regression gate stores per-case pass rates from a known-good run and fails CI when any case drops by more than `--max-drop` (default 0.05) relative to that baseline.
+
+```sh
+# 1. record a baseline from a good run (refused if the evaluation itself fails, unless --force-baseline)
+python -m agent_trace_evals run cases/support.json --runs 20 --out out/ --write-baseline baselines/support.json
+# 2. in CI: same cases, compare against the baseline
+python -m agent_trace_evals run cases/support.json --runs 20 --out out/ --baseline baselines/support.json --max-drop 0.05
+# or re-check saved traces without re-running the agent
+python -m agent_trace_evals report out/traces.jsonl --baseline baselines/support.json
+```
+
+Example with a degraded agent (`--flakiness 0.3`): every case still clears the 80% threshold, so the evaluation passes, but the gate fails:
+
+```text
+Evaluation PASS; report: out/report.md
+REGRESSION refund-policy: 100.0% -> 80.0% (drop 20.0%, allowed 5.0%)
+REGRESSION calculator: 100.0% -> 90.0% (drop 10.0%, allowed 5.0%)
+...
+Regression gate FAIL
+```
+
+Exit codes: `0` pass, `1` evaluation failed, `2` baseline missing or malformed, `3` regression (or a baseline case missing from the run; `--allow-missing-cases` relaxes that). The baseline is a small versioned JSON file (`{"version": 1, "runs": 20, "flakiness": 0.0, "cases": {"refund-policy": 1.0, ...}}`), written atomically; the gate warns when `--runs` or `--flakiness` differ from the baseline run, because pass rates are then not directly comparable. A drop exactly at `--max-drop` passes (exact decimal comparison, no float slack). New cases not in the baseline are reported and skipped.
+
 ## Plug in a real model
 
 `run_agent` accepts an `llm` callable with signature `llm(question, retrieved_documents, calculation) -> str`. It receives the question, a list of `(document_id, text)` pairs, and an optional calculator result. Replace the default toy callable at the integration point in your own runner. Keep secrets and network-specific model setup outside this dependency-free example.
@@ -64,7 +89,7 @@ Both modules are deliberately small baselines: `rag_eval.py` retrieval is lexica
 
 The included agent and knowledge base are deliberately small; the agent's keyword overlap is not semantic search, and the simulated cost and latency are illustrative. The Wilson interval describes run-level pass frequency, not model quality in general. A real integration should record provider-reported usage and handle privacy, retries, and tool permissions explicitly.
 
-Built by Markus Isaksson with an agentic workflow (spec by Grok Bot, implementation by a coding agent, reviewed and tested before publishing). Tests: 42 Python tests under pytest (the 21 core tests also run with `python -m unittest discover -s tests`; the 21 RAG tests need pytest + numpy) and 15 TypeScript `node:test` tests. No test uses the network or downloads a model.
+Built by Markus Isaksson with an agentic workflow (spec by Grok Bot, implementation by a coding agent, reviewed and tested before publishing). Tests: 109 Python tests under pytest (the 21 core tests also run with `python -m unittest discover -s tests`; the RAG, report and regression-gate tests need pytest, the RAG module tests also numpy) and 15 TypeScript `node:test` tests. No test uses the network or downloads a model.
 
 License: code MIT (`LICENSE`); the synthetic RAG corpus and queries in `rag_data/` are CC0; the recorded traces contain reranker scores and model output, see `rag_data/LICENSE-DATA`.
 
@@ -144,6 +169,30 @@ python -m agent_trace_evals.rag.bench --llm opencode --reranker jinaai/jina-rera
 python -m pytest -q                                 # tests need no models (precomputed vectors, fake reranker)
 cd ts && npm test                                   # TS port: BM25, cosine, RRF, metrics, citation check; asserts the same metric dicts as Python
 ```
+
+### Hallucination / faithfulness report
+
+`agent_trace_evals.rag.render_report` (stdlib only) turns per-question RAG results, such as the published traces, into a markdown table that makes hallucination signals visible: answers citing documents that were never retrieved (`cite_ok`), low lexical faithfulness, and refusals.
+
+```bash
+python -c "import json; from agent_trace_evals.rag import render_report; \
+print(render_report([json.loads(l) for l in open('rag_data/traces_opencode_hybrid+rerank_gate-6.5.jsonl')]))"
+```
+
+```text
+| qid | retrieved | citations | cite_ok | faithfulness | refused |
+| --- | --- | --- | --- | --- | --- |
+| q25 | files-05, files-02, files-03 | files-05 | ok | 0.0 | no |
+| q27 | print-03, teams-04, sw-02 | - | n/a | n/a | yes |
+...
+- questions: 30
+- refused: 4/30
+- refusal_rate: 13.333%
+- citation_valid (answered): 26/26
+- faithfulness_mean (answered): 0.885
+```
+
+Refusals show `n/a` for citation and faithfulness and are excluded from the means. Malformed input fails loudly (faithfulness outside [0, 1], NaN, unknown refusal flags), and cells are escaped so a stray `|` or newline in an id cannot break the table. q25 above is a translated answer, which the lexical check scores as unsupported; read low values as "needs a look", not as proof of hallucination.
 
 **TS port scope:** retrieval and metrics only (BM25, dense cosine over the precomputed vectors, RRF, recall/MRR/nDCG, citation check). Rerank, the gate,
 context packing, faithfulness and the LLM call are Python-only.
