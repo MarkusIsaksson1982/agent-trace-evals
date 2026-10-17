@@ -192,7 +192,7 @@ print(render_report([json.loads(l) for l in open('rag_data/traces_opencode_hybri
 - faithfulness_mean (answered): 0.885
 ```
 
-Refusals show `n/a` for citation and faithfulness and are excluded from the means. Malformed input fails loudly (faithfulness outside [0, 1], NaN, unknown refusal flags), and cells are escaped so a stray `|` or newline in an id cannot break the table. q25 above is a translated answer, which the lexical check scores as unsupported; read low values as "needs a look", not as proof of hallucination.
+Refusals show `n/a` for citation and faithfulness and are excluded from the means. Malformed input fails loudly (missing or blank `qid`, faithfulness outside [0, 1], NaN, unknown refusal flags), and cells are escaped so a stray `|` or newline in an id cannot break the table. q25 above is a translated answer, which the lexical check scores as unsupported; read low values as "needs a look", not as proof of hallucination.
 
 **TS port scope:** retrieval and metrics only (BM25, dense cosine over the precomputed vectors, RRF, recall/MRR/nDCG, citation check). Rerank, the gate,
 context packing, faithfulness and the LLM call are Python-only.
