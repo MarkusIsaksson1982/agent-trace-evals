@@ -165,14 +165,18 @@ def _mean(values):
 def render_report(records):
     """Render ``records`` as markdown (table + totals).
 
-    Raises ``TypeError`` for a non-dict record (naming its index) and
-    ``ValueError`` for a refused/faithfulness value that cannot be parsed.
+    Raises ``TypeError`` for a non-dict record (naming its index),
+    ``ValueError`` for a missing/empty ``qid`` or a refused/faithfulness value
+    that cannot be parsed.
     """
     lines = [HEADER, SEPARATOR]
     analyses = []
     for i, rec in enumerate(records):
         if not isinstance(rec, dict):
             raise TypeError(f"record at index {i} is not a dict (got {type(rec).__name__})")
+        qid = rec.get("qid")
+        if qid is None or (isinstance(qid, str) and not qid.strip()):
+            raise ValueError(f"record at index {i} has no qid")
         analyses.append(_analyze(rec))
         lines.append(_row(analyses[-1]))
 

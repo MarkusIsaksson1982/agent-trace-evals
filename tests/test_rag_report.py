@@ -132,6 +132,16 @@ def test_non_dict_record_raises_type_error_naming_index():
         render_report([{"qid": "ok"}, "not-a-dict"])
 
 
+def test_missing_qid_raises_value_error_naming_index():
+    with pytest.raises(ValueError, match="index"):
+        render_report([{"retrieved": ["a"], "citations": ["a"]}])
+
+
+def test_empty_qid_raises_value_error_naming_index():
+    with pytest.raises(ValueError, match="index"):
+        render_report([{"qid": "", "retrieved": ["a"], "citations": ["a"]}])
+
+
 def test_answered_none_faithfulness_is_n_a_and_skipped_in_mean():
     a = {"qid": "a", "retrieved": ["x"], "citations": ["x"], "citations_valid": True,
          "refused": False, "faithfulness": None}

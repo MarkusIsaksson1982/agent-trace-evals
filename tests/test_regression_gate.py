@@ -1,3 +1,4 @@
+import argparse
 import json
 import math
 import os
@@ -7,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_trace_evals.__main__ import main
+from agent_trace_evals.__main__ import _apply_baseline, main
 from agent_trace_evals.runner import (BASELINE_VERSION, Baseline, BaselineError,
     baseline_from_summary, compare_to_baseline, load_baseline, write_baseline)
 
@@ -162,6 +163,15 @@ def test_write_baseline_failure_cleans_temp_and_keeps_existing(tmp_path, monkeyp
         write_baseline(_summary(0.75), path)
     assert path.read_text() == '{"existing": true}'
     assert [p.name for p in tmp_path.iterdir()] == ["baseline.json"]
+
+
+def test_apply_baseline_write_error_returns_exit_code(monkeypatch):
+    def boom(*args, **kwargs):
+        raise BaselineError("bad")
+
+    monkeypatch.setattr("agent_trace_evals.__main__.write_baseline", boom)
+    args = argparse.Namespace(write_baseline="baseline.json", force_baseline=False)
+    assert _apply_baseline(_summary(0.5), args, max_drop=0.05) == 2
 
 
 def test_write_baseline_rejects_invalid_metadata_without_writing(tmp_path):

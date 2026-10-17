@@ -47,7 +47,7 @@ def _apply_baseline(summary: dict[str, Any], args: argparse.Namespace, max_drop:
         try:
             write_baseline(summary, args.write_baseline, runs=runs,
                            flakiness=getattr(args, "flakiness", None))
-        except OSError as error:
+        except (OSError, BaselineError) as error:
             print(f"error: could not write baseline: {error}", file=sys.stderr)
             return EXIT_BASELINE_ERROR
         print(f"Baseline written: {args.write_baseline}", file=sys.stderr)

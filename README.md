@@ -89,7 +89,7 @@ Both modules are deliberately small baselines: `rag_eval.py` retrieval is lexica
 
 The included agent and knowledge base are deliberately small; the agent's keyword overlap is not semantic search, and the simulated cost and latency are illustrative. The Wilson interval describes run-level pass frequency, not model quality in general. A real integration should record provider-reported usage and handle privacy, retries, and tool permissions explicitly.
 
-Built by Markus Isaksson with an agentic workflow (spec by Grok Bot, implementation by a coding agent, reviewed and tested before publishing). Tests: 109 Python tests under pytest (the 21 core tests also run with `python -m unittest discover -s tests`; the RAG, report and regression-gate tests need pytest, the RAG module tests also numpy) and 15 TypeScript `node:test` tests. No test uses the network or downloads a model.
+Built by Markus Isaksson with an agentic workflow (spec by Grok Bot, implementation by a coding agent, reviewed and tested before publishing). Tests: 112 Python tests under pytest (the 21 core tests also run with `python -m unittest discover -s tests`; the RAG, report and regression-gate tests need pytest, the RAG module tests also numpy) and 15 TypeScript `node:test` tests. No test uses the network or downloads a model.
 
 License: code MIT (`LICENSE`); the synthetic RAG corpus and queries in `rag_data/` are CC0; the recorded traces contain reranker scores and model output, see `rag_data/LICENSE-DATA`.
 
