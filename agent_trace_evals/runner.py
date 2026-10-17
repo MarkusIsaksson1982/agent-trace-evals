@@ -168,6 +168,8 @@ def load_baseline(path: str | Path) -> Baseline:
             data = json.load(stream)
     except FileNotFoundError:
         raise BaselineError(f"baseline file not found: {baseline_path}") from None
+    except UnicodeDecodeError:
+        raise BaselineError(f"baseline file is not valid UTF-8: {baseline_path}") from None
     except json.JSONDecodeError as error:
         raise BaselineError(f"baseline file is not valid JSON: {baseline_path} ({error})") from None
     except OSError as error:

@@ -344,6 +344,27 @@ def test_runs_from_summary_empty_is_none(capsys):
     assert capsys.readouterr().err == ""
 
 
+def test_runs_from_summary_mixed_with_zero_warns(capsys):
+    summary = {"cases": [{"runs": 5}, {"runs": 0}], "passed": True}
+    assert _runs_from_summary(summary) is None
+    assert "unequal run counts per case ([0, 5])" in capsys.readouterr().err
+
+
+def test_runs_from_summary_all_zero_is_none(capsys):
+    summary = {"cases": [{"runs": 0}, {"runs": 0}], "passed": True}
+    assert _runs_from_summary(summary) is None
+    assert capsys.readouterr().err == ""
+
+
+def test_non_utf8_baseline_is_clean_error(tmp_path):
+    cases, baseline = tmp_path / "cases.json", tmp_path / "baseline.json"
+    _write_cases(cases)
+    baseline.write_bytes(b"\xff\xfe\x00bad")
+    result = _run_cli(cases, tmp_path / "o", "--runs", "2", "--baseline", str(baseline))
+    assert result.returncode == 2
+    assert "Traceback" not in result.stderr
+
+
 def test_report_baseline_runs_mismatch_warns(tmp_path, capsys):
     cases = tmp_path / "cases.json"
     _write_cases(cases)

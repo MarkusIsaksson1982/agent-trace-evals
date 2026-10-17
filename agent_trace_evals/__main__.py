@@ -40,9 +40,10 @@ def _validate_baseline_args(parser: argparse.ArgumentParser, args: argparse.Name
 def _runs_from_summary(summary: dict[str, Any]) -> int | None:
     values = {row["runs"] for row in summary["cases"]
               if isinstance(row.get("runs"), int) and not isinstance(row["runs"], bool)
-              and row["runs"] > 0}
+              and row["runs"] >= 0}
     if len(values) == 1:
-        return values.pop()
+        value = values.pop()
+        return value if value > 0 else None
     if len(values) > 1:
         print("warning: traces have unequal run counts per case "
               f"({sorted(values)}); pass rates may not be comparable", file=sys.stderr)
