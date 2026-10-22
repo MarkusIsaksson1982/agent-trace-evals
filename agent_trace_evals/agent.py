@@ -32,10 +32,17 @@ def _calculate(expression: str) -> float | int:
 def _toy_llm(question: str, documents: list[tuple[str, str]], calculation: Any = None) -> str:
     if calculation is not None:
         return f"The answer is {calculation}."
+    lower = question.lower()
+    words = set(_WORDS.findall(lower))
+    date = re.search(r"\b\d{4}-\d{2}-\d{2}\b", question)
+    slot = re.search(r"\b(morning|afternoon|evening)\b", lower)
+    if ("appointment" in words or "meeting" in words) and date and slot:
+        if re.search(r"\b(change|reschedule|move|modify|alter)\b", lower):
+            return "REVIEW_REQUIRED: appointment changes need human review"
+        return f'{{"intent":"book_appointment","date":"{date.group(0)}","time_slot":"{slot.group(1)}","needs_human":false}}'
     if not documents:
         return "I don't know."
     doc_id, text = documents[0]
-    lower = question.lower()
     if "refund" in lower:
         text = "Refunds are available within 30 days of purchase when the item is unused."
     elif "warranty" in lower:
@@ -52,7 +59,8 @@ def run_agent(question: str, kb: dict[str, str], seed: int, flakiness: float = 0
     spans: list[Span] = []
     start = time.perf_counter() * 1000
     question_words = set(_WORDS.findall(question.lower()))
-    is_math = bool(re.search(r"\d\s*[+*/-]\s*\d", question))
+    math_question = re.sub(r"\b\d{4}-\d{2}-\d{2}\b", "", question)
+    is_math = bool(re.search(r"\d\s*[+*/-]\s*\d", math_question))
     is_out_of_kb = any(marker in question.lower() for marker in ("population of mars", "capital of atlantis", "invented fact"))
     retrieved: list[tuple[str, str]] = []
     if not is_math:

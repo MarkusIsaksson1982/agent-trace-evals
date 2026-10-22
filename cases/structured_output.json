@@ -1,0 +1,7 @@
+{
+  "cases": [
+    {"id":"meeting-request","question":"Please book an appointment for 2026-11-03 in the afternoon.","assertions":[{"type":"answer_matches_schema","args":{"schema":{"type":"object","properties":{"intent":{"type":"string","enum":["book_appointment"]},"date":{"type":"string","enum":["2026-11-03"]},"time_slot":{"type":"string"},"needs_human":{"type":"boolean","enum":[false]}},"required":["intent","date","time_slot","needs_human"],"additionalProperties":false}}}]},
+    {"id":"appointment-change","question":"Please change my meeting appointment on 2026-11-03 to the afternoon.","assertions":[{"type":"abstain_or_valid","args":{"schema":{"type":"object","required":["intent","date","time_slot","needs_human"],"properties":{"intent":{"type":"string"},"date":{"type":"string"},"time_slot":{"type":"string"},"needs_human":{"type":"boolean"}},"additionalProperties":false}}}]},
+    {"id":"meeting-json","question":"Extract this meeting appointment request for 2026-11-03 afternoon.","assertions":[{"type":"answer_is_json"},{"type":"answer_matches_schema","args":{"schema":{"type":"object","required":["intent","date","time_slot","needs_human"],"properties":{"intent":{"type":"string"},"date":{"type":"string"},"time_slot":{"type":"string"},"needs_human":{"type":"boolean"}},"additionalProperties":false}}}]}
+  ]
+}

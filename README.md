@@ -6,6 +6,8 @@ A compact, offline Python harness for evaluating tool-using agents through execu
 
 Agent runs can vary even when the prompt stays the same. Repeating each case with several seeds measures its pass rate and Wilson 95% lower bound, while a configurable threshold avoids treating one lucky run as success. Assertions inspect the trace: which tools ran, whether retrieval came before the answer, whether citations refer to retrieved documents, latency, cost, and span errors. This helps explain *how* a result was produced, alongside checking the final text.
 
+See [PLAN.md](PLAN.md) for the short update plan and [CHANGELOG.md](CHANGELOG.md) for changes.
+
 ## Quickstart
 
 ```sh
@@ -15,6 +17,17 @@ python -m unittest discover -s tests
 ```
 
 The run command writes `out/traces.jsonl` and `out/report.md`. The report command evaluates saved traces again using the cases file; pass `--cases path/to/cases.json` to select another file.
+
+## Structured output checks
+
+Use the standard-library JSON checks with a small schema subset. Supported keywords are `type`, `properties`, `required`, `enum`, `items`, `additionalProperties`, `minLength`, and `maxLength`; other keywords are rejected. Omitted `additionalProperties` allows extra fields, while `false` rejects them. Type and enum comparisons are strict (`bool` is not an integer). `abstain_or_valid` accepts a case-sensitive `REVIEW_REQUIRED` marker only when it is the whole answer on the first line; otherwise it parses and schema-checks JSON. A JSON fence must be the entire answer and exactly tagged `json`.
+
+```python
+schema = {"type": "object", "required": ["intent"],
+          "properties": {"intent": {"type": "string"}},
+          "additionalProperties": False}
+assertions = [{"type": "answer_matches_schema", "args": {"schema": schema}}]
+```
 
 ## Sample report
 
