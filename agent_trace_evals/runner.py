@@ -77,7 +77,7 @@ def format_report(summary: dict[str, Any]) -> str:
         if row["assertion_failures"]:
             fails.append(f"- **{row['id']}**: " + ", ".join(f"`{name}` {count}" for name, count in sorted(row["assertion_failures"].items())))
     if fails:
-        lines.extend(["", "## Assertion failures", *fails])
+        lines.extend(["", "## Failures by assertion", *fails])
     lines.extend(["", f"**Overall: {'PASS' if summary['passed'] else 'FAIL'}**", ""])
     return "\n".join(lines)
 

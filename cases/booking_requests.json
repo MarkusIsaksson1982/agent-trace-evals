@@ -1,0 +1,8 @@
+{"cases":[
+{"id":"book-date-slot","question":"Book an appointment for 2026-11-03 in the afternoon.","assertions":[{"type":"answer_is_json"},{"type":"answer_matches_schema","args":{"schema":{"type":"object","required":["intent","date","time_slot","needs_human"],"properties":{"intent":{"type":"string","enum":["book_appointment"]},"date":{"type":"string","enum":["2026-11-03"]},"time_slot":{"type":"string","enum":["afternoon"]},"needs_human":{"type":"boolean","enum":[false]}},"additionalProperties":false}}}]},
+{"id":"book-slot-first","question":"For 2026-11-04, please arrange a morning meeting.","assertions":[{"type":"answer_matches_schema","args":{"schema":{"type":"object","required":["intent","date","time_slot","needs_human"],"properties":{"intent":{"type":"string","enum":["book_appointment"]},"date":{"type":"string","enum":["2026-11-04"]},"time_slot":{"type":"string","enum":["morning"]},"needs_human":{"type":"boolean","enum":[false]}},"additionalProperties":false}}}]},
+{"id":"reschedule-request","question":"Move my appointment on 2026-11-05 to the evening.","assertions":[{"type":"answer_starts_with","args":["REVIEW_REQUIRED"]}]},
+{"id":"cancel-request","question":"Cancel the meeting appointment for 2026-11-06 in the morning.","assertions":[{"type":"answer_starts_with","args":["REVIEW_REQUIRED"]}]},
+{"id":"missing-date","question":"Please book an afternoon appointment.","assertions":[{"type":"answer_starts_with","args":["REVIEW_REQUIRED"]}]},
+{"id":"ambiguous-slot","question":"Book a meeting for 2026-11-07 when convenient.","assertions":[{"type":"answer_starts_with","args":["REVIEW_REQUIRED"]}]}
+]}

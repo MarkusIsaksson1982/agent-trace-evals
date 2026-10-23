@@ -4,7 +4,7 @@ from pathlib import Path
 
 from agent_trace_evals.assertions import (abstain_or_valid, answer_is_json,
     answer_matches_schema, _json_answer)
-from agent_trace_evals.agent import _toy_llm
+from agent_trace_evals.agent import _toy_llm, run_agent
 from agent_trace_evals.schema import validate
 from agent_trace_evals.trace import Trace
 
@@ -77,6 +77,16 @@ class StructuredAssertionTests(unittest.TestCase):
         self.assertIn('"date":"2027-01-02"', _toy_llm("book an appointment 2027-01-02 morning", []))
         self.assertTrue(_toy_llm("change my meeting 2027-01-02 morning", []).startswith("REVIEW_REQUIRED"))
         self.assertNotIn('"intent"', _toy_llm("meeting room cost", []))
+
+    def test_booking_boundaries(self):
+        self.assertNotIn('"intent"', _toy_llm("book", []))
+        self.assertTrue(_toy_llm("cancel my 9am", []).startswith("REVIEW_REQUIRED"))
+        self.assertTrue(_toy_llm("book appointment 2026-02-31 morning", []).startswith("REVIEW_REQUIRED"))
+
+    def test_flaky_booking_mutations(self):
+        clean = _toy_llm("book appointment 2027-01-02 morning", [])
+        answers = {run_agent("book appointment 2027-01-02 morning", {}, seed, 1).final_answer for seed in range(20)}
+        self.assertTrue(any(answer != clean for answer in answers))
 
     def test_structured_case_loads(self):
         data = json.loads(Path("cases/structured_output.json").read_text())

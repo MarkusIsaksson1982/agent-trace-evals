@@ -57,6 +57,9 @@ def answer_contains(text: str) -> Assertion:
         return ok, f"answer {'contains' if ok else 'does not contain'} {text!r}"
     return check
 
+def answer_starts_with(text: str) -> Assertion:
+    return lambda trace: (trace.final_answer.startswith(text), f"answer {'starts' if trace.final_answer.startswith(text) else 'does not start'} with {text!r}")
+
 
 def max_latency_ms(n: float) -> Assertion:
     def check(trace: Trace) -> tuple[bool, str]:
@@ -136,7 +139,7 @@ def abstain_or_valid(schema: dict, abstain_marker: str = "REVIEW_REQUIRED") -> A
 ASSERTIONS: dict[str, Callable[..., Assertion]] = {
     "tool_called": tool_called, "tool_not_called": tool_not_called, "tool_order": tool_order,
     "retrieval_before_answer": retrieval_before_answer, "citations_subset_of_retrieved": citations_subset_of_retrieved,
-    "answer_contains": answer_contains, "max_latency_ms": max_latency_ms,
+    "answer_contains": answer_contains, "answer_starts_with": answer_starts_with, "max_latency_ms": max_latency_ms,
     "max_cost_usd": max_cost_usd, "no_span_errors": no_span_errors,
     "answer_is_json": answer_is_json, "answer_matches_schema": answer_matches_schema,
     "abstain_or_valid": abstain_or_valid,

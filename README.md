@@ -8,6 +8,8 @@ Agent runs can vary even when the prompt stays the same. Repeating each case wit
 
 See [PLAN.md](PLAN.md) for the short update plan and [CHANGELOG.md](CHANGELOG.md) for changes.
 
+Recorded clean and flaky runs of a synthetic booking/rescheduling case set are in [examples/booking](examples/booking/). They exercise the harness with the built-in toy agent; they are not a model benchmark.
+
 ## Quickstart
 
 ```sh

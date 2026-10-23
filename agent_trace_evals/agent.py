@@ -6,6 +6,7 @@ import operator
 import random
 import re
 import time
+from datetime import date
 from typing import Any, Callable
 
 from .trace import Span, Trace
@@ -13,6 +14,10 @@ from .trace import Span, Trace
 _WORDS = re.compile(r"[a-z0-9]+")
 _CITATION = re.compile(r"\[doc:([\w-]+)\]")
 _OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv}
+
+def _booking_request(question: str) -> bool:
+    words = set(_WORDS.findall(question.lower()))
+    return bool(words & {"book", "booking", "schedule", "arrange", "reschedule", "move", "modify", "alter", "cancel"})
 
 
 def _calculate(expression: str) -> float | int:
@@ -34,12 +39,18 @@ def _toy_llm(question: str, documents: list[tuple[str, str]], calculation: Any =
         return f"The answer is {calculation}."
     lower = question.lower()
     words = set(_WORDS.findall(lower))
-    date = re.search(r"\b\d{4}-\d{2}-\d{2}\b", question)
-    slot = re.search(r"\b(morning|afternoon|evening)\b", lower)
-    if ("appointment" in words or "meeting" in words) and date and slot:
-        if re.search(r"\b(change|reschedule|move|modify|alter)\b", lower):
-            return "REVIEW_REQUIRED: appointment changes need human review"
-        return f'{{"intent":"book_appointment","date":"{date.group(0)}","time_slot":"{slot.group(1)}","needs_human":false}}'
+    dates = re.findall(r"\b\d{4}-\d{2}-\d{2}\b", question)
+    slots = re.findall(r"\b(morning|afternoon|evening)\b", lower)
+    change = re.search(r"\b(change|reschedule|move|modify|alter|cancel)\b", lower)
+    if change and (words & {"appointment", "meeting", "booking", "cancel", "reschedule"}):
+        return "REVIEW_REQUIRED: appointment changes need human review"
+    booking_verb = re.search(r"\b(book|booking|schedule|arrange)\b", lower)
+    if booking_verb and (words & {"appointment", "meeting", "booking"}):
+        if len(dates) != 1 or len(slots) != 1:
+            return "REVIEW_REQUIRED: booking details need human review"
+        try: date.fromisoformat(dates[0])
+        except ValueError: return "REVIEW_REQUIRED: booking details need human review"
+        return f'{{"intent":"book_appointment","date":"{dates[0]}","time_slot":"{slots[0]}","needs_human":false}}'
     if not documents:
         return "I don't know."
     doc_id, text = documents[0]
@@ -99,7 +110,15 @@ def run_agent(question: str, kb: dict[str, str], seed: int, flakiness: float = 0
         error = None
     except Exception as exc:
         answer, error = "", str(exc)
-    if flakiness and rng.random() < flakiness * 0.5:
+    is_booking = _booking_request(question)
+    if is_booking and flakiness and rng.random() < flakiness:
+        # Keep the clean path byte-identical; failures model common structured-output defects.
+        mode = rng.randrange(4)
+        if mode == 0: answer = answer[:-1] if answer.lstrip().startswith("{") else answer + "!"
+        elif mode == 1: answer = answer.replace(',"needs_human":false', '', 1) if answer.lstrip().startswith("{") else answer + "!"
+        elif mode == 2: answer = answer.replace('"needs_human":false', '"needs_human":"false"', 1) if answer.lstrip().startswith("{") else answer + "!"
+        elif mode == 3: answer = "I cannot complete that request automatically." if answer.startswith("REVIEW_REQUIRED") else answer + "!"
+    elif flakiness and rng.random() < flakiness * 0.5:
         answer += " [doc:unknown]"
     spans.append(Span("answer", "llm", question, answer, t0, time.perf_counter() * 1000,
                       tokens_in=len(question.split()), tokens_out=len(answer.split()),
