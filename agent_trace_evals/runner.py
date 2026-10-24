@@ -13,7 +13,7 @@ from typing import Any
 
 from .agent import run_agent
 from .assertions import build_assertion
-from .trace import Trace, read_jsonl, write_jsonl
+from .trace import Trace, read_jsonl, redact_trace, write_jsonl
 
 BASELINE_VERSION = 1
 
@@ -31,7 +31,16 @@ def load_cases(path: str | Path) -> list[dict[str, Any]]:
     with Path(path).open(encoding="utf-8") as stream: data = json.load(stream)
     cases = data.get("cases", data) if isinstance(data, dict) else data
     if not isinstance(cases, list): raise ValueError("cases file must contain a list or a 'cases' list")
+    ids = set()
     for case in cases:
+        if not isinstance(case, dict): raise ValueError("each case must be an object")
+        if case.get("id") in ids: raise ValueError(f"duplicate case id: {case.get('id')!r}")
+        ids.add(case.get("id"))
+        if "sensitive" in case and (not isinstance(case["sensitive"], dict) or
+                any(not isinstance(key, str) or not isinstance(value, str) or
+                    not value or not any(char not in " \t\r\n.,_/'-" for char in value)
+                    for key, value in case["sensitive"].items())):
+            raise ValueError("case sensitive must be a dict of non-empty strings")
         if not all(key in case for key in ("id", "question")): raise ValueError("each case requires id and question")
         case.setdefault("assertions", [])
         case.setdefault("min_pass_rate", 0.8)
@@ -45,7 +54,13 @@ def evaluate_traces(cases: list[dict[str, Any]], traces: list[Trace]) -> dict[st
         if trace.case_id in by_id: by_id[trace.case_id].append(trace)
     for case in cases:
         case_traces = by_id[case["id"]]
-        assertions = [(spec, build_assertion(spec)) for spec in case.get("assertions", [])]
+        assertions = []
+        for spec in case.get("assertions", []):
+            args = spec.get("args", {})
+            if args is None: raise ValueError("assertion args must not be null")
+            if spec.get("type") == "no_sensitive_echo" and "fields" not in (args if isinstance(args, dict) else {}):
+                spec = dict(spec, args=dict(args if isinstance(args, dict) else {}, fields=case.get("sensitive", {})))
+            assertions.append((spec, build_assertion(spec)))
         failed = Counter()
         passing_runs = 0
         for trace in case_traces:
@@ -232,7 +247,8 @@ def run_cases(cases_path: str | Path, runs: int = 20, flakiness: float = 0.0,
     traces = [run_agent(case["question"], kb, seed, flakiness, case_id=case["id"], run_idx=seed)
               for case in cases for seed in range(runs)]
     out_dir = Path(out); out_dir.mkdir(parents=True, exist_ok=True)
-    write_jsonl(traces, out_dir / "traces.jsonl")
+    fields = {case["id"]: case.get("sensitive", {}) for case in cases}
+    write_jsonl([redact_trace(trace, fields.get(trace.case_id, {})) for trace in traces], out_dir / "traces.jsonl")
     summary = evaluate_traces(cases, traces)
     write_report(summary, out_dir / "report.md")
     return summary

@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+import copy
 import json
 from pathlib import Path
 from typing import Any, Iterable
+import re
 
 
 @dataclass
@@ -32,6 +34,37 @@ class Trace:
     seed: int
     spans: list[Span] = field(default_factory=list)
     final_answer: str = ""
+
+
+def _sensitive_pattern(value: str) -> re.Pattern[str]:
+    parts = [re.escape(char) for char in value if char not in " \t\r\n.,_/'-"]
+    if len(parts) < 3:
+        raise ValueError("sensitive values must contain at least three kept characters")
+    return re.compile(r"(?<![A-Za-z0-9])" + r"[\s.,_/'-]*".join(parts) + r"(?![A-Za-z0-9])", re.IGNORECASE)
+
+
+def redact_text(text: str, fields: dict[str, str], placeholder: str) -> str:
+    patterns = [(field, _sensitive_pattern(value)) for field, value in
+                sorted(fields.items(), key=lambda item: len(item[1]), reverse=True)]
+    return re.sub(r"|".join(f"(?P<field_{i}>{pattern.pattern})" for i, (_, pattern) in enumerate(patterns)),
+                  lambda match: placeholder.format(field=patterns[int(match.lastgroup.split('_')[1])][0]), text,
+                  flags=re.IGNORECASE) if patterns else text
+
+
+def redact_trace(trace: Trace, fields: dict[str, str],
+                 placeholder: str = "[REDACTED:{field}]") -> Trace:
+    """Return a deep redacted copy of a trace without changing the original."""
+    def redact(value: Any) -> Any:
+        if isinstance(value, str): return redact_text(value, fields, placeholder)
+        if isinstance(value, dict): return {redact(key): redact(item) for key, item in value.items()}
+        if isinstance(value, list): return [redact(item) for item in value]
+        if isinstance(value, tuple): return tuple(redact(item) for item in value)
+        return copy.deepcopy(value)
+
+    return Trace(trace.case_id, trace.run_idx, trace.seed,
+                 [Span(redact(s.name), s.kind, redact(s.input), redact(s.output), s.start_ms, s.end_ms,
+                       s.tokens_in, s.tokens_out, s.cost_usd, redact(s.error)) for s in trace.spans],
+                 redact(trace.final_answer))
 
 
 def trace_from_dict(data: dict[str, Any]) -> Trace:

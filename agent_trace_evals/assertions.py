@@ -5,7 +5,7 @@ import re
 import json
 from typing import Callable
 
-from .trace import Trace
+from .trace import Trace, redact_text
 from .schema import validate
 
 Assertion = Callable[[Trace], tuple[bool, str]]
@@ -55,6 +55,25 @@ def answer_contains(text: str) -> Assertion:
     def check(trace: Trace) -> tuple[bool, str]:
         ok = text.casefold() in trace.final_answer.casefold()
         return ok, f"answer {'contains' if ok else 'does not contain'} {text!r}"
+    return check
+
+
+def no_sensitive_echo(fields: dict[str, str], placeholder: str = "[REDACTED:{field}]") -> Assertion:
+    if not isinstance(fields, dict) or not fields or any(
+            not isinstance(field, str) or not isinstance(value, str) or
+            not value or not any(char not in " \t\r\n.,_/'-" for char in value)
+            for field, value in fields.items()):
+        raise ValueError("no_sensitive_echo fields must be a non-empty map of strings")
+    def check(trace: Trace) -> tuple[bool, str]:
+        leaked = []
+        for field, value in fields.items():
+            tokens = [token for token in re.split(r"[\s.,_/'-]+", value) if len(token) >= 3]
+            candidates = [value] + tokens
+            answer = trace.final_answer
+            if any(redact_text(answer, {field: candidate}, placeholder) != answer
+                   for candidate in candidates) or placeholder.format(field=field).casefold() in answer.casefold():
+                leaked.append(field)
+        return not leaked, "no sensitive fields echoed" if not leaked else "sensitive fields echoed: " + ", ".join(leaked)
     return check
 
 def answer_starts_with(text: str) -> Assertion:
@@ -140,6 +159,7 @@ ASSERTIONS: dict[str, Callable[..., Assertion]] = {
     "tool_called": tool_called, "tool_not_called": tool_not_called, "tool_order": tool_order,
     "retrieval_before_answer": retrieval_before_answer, "citations_subset_of_retrieved": citations_subset_of_retrieved,
     "answer_contains": answer_contains, "answer_starts_with": answer_starts_with, "max_latency_ms": max_latency_ms,
+    "no_sensitive_echo": no_sensitive_echo,
     "max_cost_usd": max_cost_usd, "no_span_errors": no_span_errors,
     "answer_is_json": answer_is_json, "answer_matches_schema": answer_matches_schema,
     "abstain_or_valid": abstain_or_valid,
