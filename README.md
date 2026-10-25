@@ -86,7 +86,21 @@ REGRESSION calculator: 100.0% -> 90.0% (drop 10.0%, allowed 5.0%)
 Regression gate FAIL
 ```
 
-Exit codes: `0` pass, `1` evaluation failed, `2` baseline missing or malformed, `3` regression (or a baseline case missing from the run; `--allow-missing-cases` relaxes that). The baseline is a small versioned JSON file (`{"version": 1, "runs": 20, "flakiness": 0.0, "cases": {"refund-policy": 1.0, ...}}`), written atomically; the gate warns when `--runs` or `--flakiness` differ from the baseline run, because pass rates are then not directly comparable (for `report`, the run count is taken from the traces, and unequal per-case counts are warned about). A drop exactly at `--max-drop` passes (exact decimal comparison, no float slack). New cases not in the baseline are reported and skipped.
+Exit codes: `0` pass, `1` evaluation failed, `2` baseline missing or malformed, `3` regression (including abstain drift). The baseline is a small versioned JSON file (`{"version": 1, "runs": 20, "flakiness": 0.0, "cases": {"refund-policy": 1.0, ...}, "abstain_rates": {"refund-policy": 0.0, ...}}`), written atomically; the gate warns when run counts differ, because rates are then not directly comparable. Overall abstain rate is run-weighted (`sum(abstained runs) / sum(runs)`), and unequal per-case counts are warned about. A drop exactly at `--max-drop` passes. New cases not in the baseline are reported and skipped.
+
+## Human-review rate and abstain-drift gate
+
+An abstention is an answer beginning with `REVIEW_REQUIRED` (or a case's custom marker), followed by whitespace, `:`, or the end of the answer, unless the remainder after left-trimming begins with `{`, `[`, or a fence. Leading whitespace is allowed; JSON strings, numbers, and literals therefore still count. The rate is a prefix-based proxy for how often the agent appears to hand a case to a human, not handoff correctness.
+
+| Case | Pass rate | Review rate |
+|---|---:|---:|
+| booking | 87.5% | 12.5% |
+
+```sh
+python -m agent_trace_evals run cases/booking_requests.json --runs 20 --baseline baseline.json --max-abstain-drift 0.10
+```
+
+`--max-abstain-drift` checks both directions and fails only when absolute drift is greater than the limit; equality passes. An old baseline without `abstain_rates` fails closed (exit `2`), unless `--allow-missing-abstain-rates` is supplied. Partial or invalid rate maps are rejected, and unavailable zero-run rates cannot be gated.
 
 ## Plug in a real model
 

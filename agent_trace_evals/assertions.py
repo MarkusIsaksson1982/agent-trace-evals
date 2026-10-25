@@ -138,13 +138,18 @@ def answer_matches_schema(schema: dict) -> Assertion:
     return check
 
 
+def is_abstention(answer: str, marker: str = "REVIEW_REQUIRED") -> bool:
+    marker_re = re.escape(marker)
+    if not isinstance(answer, str) or not re.match(rf"^\s*{marker_re}(?:\s|:|$)", answer):
+        return False
+    remainder = re.sub(rf"^\s*{marker_re}(?:\s|:|$)", "", answer, count=1)
+    return not remainder.lstrip().startswith(("{", "[", "```"))
+
+
 def abstain_or_valid(schema: dict, abstain_marker: str = "REVIEW_REQUIRED") -> Assertion:
     def check(trace: Trace) -> tuple[bool, str]:
-        marker = re.escape(abstain_marker)
-        if isinstance(trace.final_answer, str) and re.match(rf"^\s*{marker}(?:\s|:|$)", trace.final_answer):
-            remainder = re.sub(rf"^\s*{marker}(?:\s|:|$)", "", trace.final_answer, count=1)
-            if not remainder.lstrip().startswith(("{", "[", "```")):
-                return True, f"answer contains abstention marker {abstain_marker!r}"
+        if is_abstention(trace.final_answer, abstain_marker):
+            return True, f"answer contains abstention marker {abstain_marker!r}"
         value, parse_error = _json_answer(trace.final_answer)
         if parse_error:
             errors = [f"invalid JSON: {parse_error}"]

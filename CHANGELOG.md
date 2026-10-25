@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-25
+- Added a human-review rate metric: each case row and the overall summary report the share of runs whose answer abstains with the review marker (`is_abstention`, shared with `abstain_or_valid`), shown as a "Review rate" column next to pass rate; baselines now store abstain rates, and `--max-abstain-drift` fails the regression gate (exit 3) when a case's review rate moves more than the allowed amount in either direction; with tests and README docs.
+
 ## 2026-10-24
 - Added a PII-leak guard: the `no_sensitive_echo` assertion fails when the final answer echoes synthetic case fields declared under `sensitive` (or their redaction placeholders), and `run_cases` now redacts those fields from traces before writing `traces.jsonl`; with a synthetic case set (`cases/pii_guard.json`), tests and README docs.
 

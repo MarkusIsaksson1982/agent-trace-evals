@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,10 @@ def _add_baseline_args(parser: argparse.ArgumentParser) -> None:
                         help="exit 3 if any case drops more than --max-drop below this baseline")
     parser.add_argument("--max-drop", type=float, default=None, metavar="RATE",
                         help=f"allowed pass-rate drop per case before the gate fails (default: {DEFAULT_MAX_DROP})")
+    parser.add_argument("--max-abstain-drift", type=float, default=None, metavar="RATE",
+                        help="allowed two-sided human-review-rate drift per case; equality passes")
+    parser.add_argument("--allow-missing-abstain-rates", action="store_true",
+                        help="allow abstain drift checks to be skipped for an old baseline")
     parser.add_argument("--force-baseline", action="store_true",
                         help="allow --write-baseline when the evaluation itself failed")
     parser.add_argument("--allow-missing-cases", action="store_true",
@@ -34,6 +39,11 @@ def _validate_baseline_args(parser: argparse.ArgumentParser, args: argparse.Name
         parser.error("--write-baseline and --baseline cannot be used together")
     if args.max_drop is not None and not args.baseline:
         print("warning: --max-drop has no effect without --baseline", file=sys.stderr)
+    max_abstain_drift = getattr(args, "max_abstain_drift", None)
+    if max_abstain_drift is not None and not args.baseline:
+        print("warning: --max-abstain-drift has no effect without --baseline", file=sys.stderr)
+    if max_abstain_drift is not None and (not math.isfinite(max_abstain_drift) or not 0.0 <= max_abstain_drift <= 1.0):
+        parser.error("--max-abstain-drift must be between 0 and 1")
     return DEFAULT_MAX_DROP if args.max_drop is None else args.max_drop
 
 
@@ -46,7 +56,8 @@ def _runs_from_summary(summary: dict[str, Any]) -> int | None:
         return value if value > 0 else None
     if len(values) > 1:
         print("warning: traces have unequal run counts per case "
-              f"({sorted(values)}); pass rates may not be comparable", file=sys.stderr)
+              f"({sorted(values)}); pass and overall abstain rates may not be comparable; "
+              "overall abstain rate is run-weighted", file=sys.stderr)
     return None
 
 
@@ -78,13 +89,24 @@ def _apply_baseline(summary: dict[str, Any], args: argparse.Namespace, max_drop:
     if baseline.flakiness is not None and flakiness is not None and baseline.flakiness != flakiness:
         print(f"warning: baseline recorded with --flakiness {baseline.flakiness}, "
               f"current run uses --flakiness {flakiness}", file=sys.stderr)
-    gate = compare_to_baseline(summary, baseline, max_drop, allow_missing=args.allow_missing_cases)
+    try:
+        gate = compare_to_baseline(summary, baseline, max_drop, allow_missing=args.allow_missing_cases,
+                                   max_abstain_drift=getattr(args, "max_abstain_drift", None),
+                                   allow_missing_abstain_rates=args.allow_missing_abstain_rates)
+    except BaselineError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return EXIT_BASELINE_ERROR
     if gate["new_cases"]:
         print(f"note: {len(gate['new_cases'])} case(s) not in baseline, skipped: "
               + ", ".join(gate["new_cases"]), file=sys.stderr)
     for regression in gate["regressions"]:
         print(f"REGRESSION {regression['id']}: {regression['baseline_pass_rate']:.1%} -> "
               f"{regression['pass_rate']:.1%} (drop {regression['drop']:.1%}, allowed {max_drop:.1%})")
+    for drift in gate["abstain_drifts"]:
+        print(f"ABSTAIN DRIFT {drift['id']}: {drift['baseline_abstain_rate']:.1%} -> "
+              f"{drift['abstain_rate']:.1%} (drift {drift['drift']:+.1%}, allowed {args.max_abstain_drift:.1%})")
+    if gate["abstain_gate_skipped"]:
+        print("note: abstain drift gate skipped; baseline has no abstain_rates", file=sys.stderr)
     for case_id in gate["missing_cases"]:
         if args.allow_missing_cases:
             print(f"note: baseline case {case_id!r} absent from this run, ignored", file=sys.stderr)

@@ -12,7 +12,7 @@ from fractions import Fraction
 from typing import Any
 
 from .agent import run_agent
-from .assertions import build_assertion
+from .assertions import build_assertion, is_abstention
 from .trace import Trace, read_jsonl, redact_trace, write_jsonl
 
 BASELINE_VERSION = 1
@@ -44,6 +44,8 @@ def load_cases(path: str | Path) -> list[dict[str, Any]]:
         if not all(key in case for key in ("id", "question")): raise ValueError("each case requires id and question")
         case.setdefault("assertions", [])
         case.setdefault("min_pass_rate", 0.8)
+        if "abstain_marker" in case and (not isinstance(case["abstain_marker"], str) or not case["abstain_marker"]):
+            raise ValueError("case abstain_marker must be a non-empty string")
     return cases
 
 
@@ -53,6 +55,9 @@ def evaluate_traces(cases: list[dict[str, Any]], traces: list[Trace]) -> dict[st
     for trace in traces:
         if trace.case_id in by_id: by_id[trace.case_id].append(trace)
     for case in cases:
+        marker = case.get("abstain_marker", "REVIEW_REQUIRED")
+        if not isinstance(marker, str) or not marker:
+            raise ValueError("case abstain_marker must be a non-empty string")
         case_traces = by_id[case["id"]]
         assertions = []
         for spec in case.get("assertions", []):
@@ -63,7 +68,9 @@ def evaluate_traces(cases: list[dict[str, Any]], traces: list[Trace]) -> dict[st
             assertions.append((spec, build_assertion(spec)))
         failed = Counter()
         passing_runs = 0
+        abstained_runs = 0
         for trace in case_traces:
+            abstained_runs += int(is_abstention(trace.final_answer, marker))
             run_pass = True
             for spec, assertion in assertions:
                 ok, _ = assertion(trace)
@@ -73,27 +80,36 @@ def evaluate_traces(cases: list[dict[str, Any]], traces: list[Trace]) -> dict[st
             passing_runs += int(run_pass)
         total = len(case_traces)
         rate = passing_runs / total if total else 0.0
+        abstain_rate = abstained_runs / total if total else None
         threshold = float(case.get("min_pass_rate", 0.8))
         summaries.append({"id": case["id"], "question": case["question"], "runs": total,
                           "passed_runs": passing_runs, "pass_rate": rate,
+                          "abstained_runs": abstained_runs, "abstain_rate": abstain_rate,
                           "wilson_lower_bound": wilson_lower_bound(passing_runs, total),
                           "min_pass_rate": threshold, "passed": total > 0 and rate >= threshold,
                           "assertion_failures": dict(failed)})
-    return {"cases": summaries, "passed": bool(summaries) and all(row["passed"] for row in summaries)}
+    total_runs = sum(row["runs"] for row in summaries)
+    return {"cases": summaries, "abstain_rate": (sum(row["abstained_runs"] for row in summaries) / total_runs
+                                                   if total_runs else None),
+            "passed": bool(summaries) and all(row["passed"] for row in summaries)}
 
 
 def format_report(summary: dict[str, Any]) -> str:
-    lines = ["# Agent trace evaluation report", "", "| Case | Runs | Passed | Pass rate | Wilson 95% lower | Threshold | Result |",
-             "|---|---:|---:|---:|---:|---:|---|"]
+    lines = ["# Agent trace evaluation report", "", "| Case | Runs | Passed | Pass rate | Review rate | Wilson 95% lower | Threshold | Result |",
+             "|---|---:|---:|---:|---:|---:|---:|---|"]
     fails: list[str] = []
     for row in summary["cases"]:
-        lines.append(f"| {row['id']} | {row['runs']} | {row['passed_runs']} | {row['pass_rate']:.1%} | "
+        review_rate = "unavailable" if row.get("abstain_rate") is None else f"{row['abstain_rate']:.1%}"
+        lines.append(f"| {row['id']} | {row['runs']} | {row['passed_runs']} | {row['pass_rate']:.1%} | {review_rate} | "
                      f"{row['wilson_lower_bound']:.1%} | {row['min_pass_rate']:.1%} | {'PASS' if row['passed'] else 'FAIL'} |")
         if row["assertion_failures"]:
             fails.append(f"- **{row['id']}**: " + ", ".join(f"`{name}` {count}" for name, count in sorted(row["assertion_failures"].items())))
     if fails:
         lines.extend(["", "## Failures by assertion", *fails])
-    lines.extend(["", f"**Overall: {'PASS' if summary['passed'] else 'FAIL'}**", ""])
+    overall = summary.get("abstain_rate")
+    overall_text = "unavailable" if overall is None else f"{overall:.1%}"
+    lines.extend(["", f"Overall human-review rate: {overall_text}",
+                  f"**Overall: {'PASS' if summary['passed'] else 'FAIL'}**", ""])
     return "\n".join(lines)
 
 
@@ -112,6 +128,7 @@ class Baseline:
     runs: int | None = None
     flakiness: float | None = None
     version: int = BASELINE_VERSION
+    abstain_rates: dict[str, float] | None = None
 
 
 def baseline_from_summary(summary: dict[str, Any]) -> dict[str, float]:
@@ -126,6 +143,11 @@ def write_baseline(summary: dict[str, Any], path: str | Path,
     destination.parent.mkdir(parents=True, exist_ok=True)
     payload = {"version": BASELINE_VERSION, "runs": runs, "flakiness": flakiness,
                "cases": baseline_from_summary(summary)}
+    if any("abstain_rate" in row for row in summary["cases"]):
+        if any(row.get("abstain_rate") is None for row in summary["cases"]):
+            raise BaselineError("cannot write baseline: abstain rates are unavailable for some cases")
+        payload["abstain_rates"] = {str(row["id"]): float(row["abstain_rate"])
+                                     for row in summary["cases"]}
     text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     fd, tmp_name = tempfile.mkstemp(dir=destination.parent, prefix=f".{destination.name}.", suffix=".tmp")
     try:
@@ -198,8 +220,17 @@ def load_baseline(path: str | Path) -> Baseline:
     if not isinstance(raw_cases, dict):
         raise BaselineError("baseline must contain a 'cases' object mapping case ids to pass rates")
     rates = {str(case_id): _validate_rate(str(case_id), rate) for case_id, rate in raw_cases.items()}
+    raw_abstain = data.get("abstain_rates")
+    abstain_rates = None if raw_abstain is None else {
+        str(case_id): _validate_rate(str(case_id), rate) for case_id, rate in (
+            raw_abstain.items() if isinstance(raw_abstain, dict) else ())}
+    if raw_abstain is not None and not isinstance(raw_abstain, dict):
+        raise BaselineError("baseline 'abstain_rates' must be an object")
+    if abstain_rates is not None and set(abstain_rates) != set(rates):
+        raise BaselineError("baseline 'abstain_rates' must contain exactly the baseline case ids")
     return Baseline(cases=rates, runs=_validate_runs(data.get("runs")),
-                    flakiness=_validate_flakiness(data.get("flakiness")), version=version)
+                    flakiness=_validate_flakiness(data.get("flakiness")), version=version,
+                    abstain_rates=abstain_rates)
 
 
 def _exact_rate(value: Any) -> Fraction:
@@ -208,8 +239,12 @@ def _exact_rate(value: Any) -> Fraction:
 
 
 def compare_to_baseline(summary: dict[str, Any], baseline: Baseline, max_drop: float = 0.05,
-                        allow_missing: bool = False) -> dict[str, Any]:
-    """Gate that fails iff ``baseline - current > max_drop`` for any shared case.
+                        allow_missing: bool = False, max_abstain_drift: float | None = None,
+                        allow_missing_abstain_rates: bool = False) -> dict[str, Any]:
+    """Gate pass-rate drops and two-sided abstain drift.
+
+    A pass-rate drop exactly at ``max_drop`` passes. Abstain drift fails when
+    ``abs(current - baseline) > max_abstain_drift``; equality passes.
 
     Uses an exact decimal comparison (``Fraction(repr(...))``), so rates are
     compared as printed: a drop exactly at the threshold passes and any larger
@@ -219,9 +254,22 @@ def compare_to_baseline(summary: dict[str, Any], baseline: Baseline, max_drop: f
             not math.isfinite(max_drop) or not 0.0 <= max_drop <= 1.0:
         raise ValueError("max_drop must be a finite number between 0 and 1")
     rates = baseline.cases
+    if max_abstain_drift is not None and (isinstance(max_abstain_drift, bool) or not isinstance(max_abstain_drift, (int, float)) or
+                                          not math.isfinite(max_abstain_drift) or not 0.0 <= max_abstain_drift <= 1.0):
+        raise ValueError("max_abstain_drift must be a finite number between 0 and 1")
     current_rates = {str(row["id"]): float(row["pass_rate"]) for row in summary["cases"]}
+    if max_abstain_drift is not None and baseline.abstain_rates is None and not allow_missing_abstain_rates:
+        raise BaselineError("abstain drift gate requires baseline 'abstain_rates' (or --allow-missing-abstain-rates)")
+    if max_abstain_drift is not None and baseline.abstain_rates is not None:
+        missing = sorted(set(current_rates) - set(baseline.abstain_rates))
+        unavailable = sorted(str(row["id"]) for row in summary["cases"] if row.get("abstain_rate") is None)
+        if missing:
+            raise BaselineError("baseline is missing abstain rates for: " + ", ".join(missing))
+        if unavailable:
+            raise BaselineError("abstain rates unavailable for: " + ", ".join(unavailable))
     limit = _exact_rate(max_drop)
     regressions: list[dict[str, Any]] = []
+    abstain_drifts: list[dict[str, Any]] = []
     new_cases: list[str] = []
     for row in summary["cases"]:
         case_id = str(row["id"])
@@ -232,10 +280,16 @@ def compare_to_baseline(summary: dict[str, Any], baseline: Baseline, max_drop: f
         if drop > limit:
             regressions.append({"id": case_id, "baseline_pass_rate": rates[case_id],
                                 "pass_rate": row["pass_rate"], "drop": float(drop)})
+        if max_abstain_drift is not None and baseline.abstain_rates is not None and case_id in baseline.abstain_rates:
+            drift = _exact_rate(row["abstain_rate"]) - _exact_rate(baseline.abstain_rates[case_id])
+            if abs(drift) > _exact_rate(max_abstain_drift):
+                abstain_drifts.append({"id": case_id, "baseline_abstain_rate": baseline.abstain_rates[case_id],
+                                      "abstain_rate": row["abstain_rate"], "drift": float(drift)})
     missing_cases = sorted(case_id for case_id in rates if case_id not in current_rates)
-    failed = bool(regressions) or (bool(missing_cases) and not allow_missing)
+    failed = bool(regressions) or bool(abstain_drifts) or (bool(missing_cases) and not allow_missing)
     return {"passed": not failed, "max_drop": max_drop, "regressions": regressions,
-            "missing_cases": missing_cases, "new_cases": sorted(new_cases)}
+            "missing_cases": missing_cases, "new_cases": sorted(new_cases), "abstain_drifts": abstain_drifts,
+            "abstain_gate_skipped": max_abstain_drift is not None and baseline.abstain_rates is None}
 
 
 def run_cases(cases_path: str | Path, runs: int = 20, flakiness: float = 0.0,
