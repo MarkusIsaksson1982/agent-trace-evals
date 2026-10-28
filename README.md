@@ -1,5 +1,7 @@
 # agent-trace-evals
 
+[![CI](https://github.com/MarkusIsaksson1982/agent-trace-evals/actions/workflows/ci.yml/badge.svg)](https://github.com/MarkusIsaksson1982/agent-trace-evals/actions/workflows/ci.yml)
+
 A compact, offline Python harness for evaluating tool-using agents through execution traces. The core harness uses only the Python 3.11+ standard library; the optional RAG module (see [RAG](#rag)) adds numpy and fastembed.
 
 ## Why stochastic and trace-based?
