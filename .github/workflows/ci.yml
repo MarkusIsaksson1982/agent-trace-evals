@@ -9,6 +9,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "${{ matrix.python-version }}" }
+      - run: pip install numpy fastembed pytest
       - run: python -m unittest discover -s tests
   typescript:
     runs-on: ubuntu-latest
@@ -16,6 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
+        with: { node-version: 20 }
       - run: npm install --no-audit --no-fund
       - run: npm test
